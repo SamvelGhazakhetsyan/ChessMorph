@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "62582733267",
+    "project_id": "chessmorphreglog",
+    "storage_bucket": "chessmorphreglog.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:62582733267:android:d137ab8c546f2552ab9726",
+        "android_client_info": {
+          "package_name": "com.example.chessmorph_proj"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATlPuuA5PidtkqmZPbXK4Natw6I-_Rt4s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
