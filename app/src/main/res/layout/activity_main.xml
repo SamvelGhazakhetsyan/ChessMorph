@@ -29,4 +29,15 @@
         app:layout_constraintVertical_bias="0.087"
         android:onClick="logout"/>
 
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Play"
+        app:layout_constraintBottom_toTopOf="@+id/textView2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:onClick="play"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
