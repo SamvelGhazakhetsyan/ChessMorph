@@ -7,14 +7,20 @@
     android:layout_height="match_parent"
     tools:context=".Board">
 
-    <GridLayout
-        android:id="@+id/chessBoard"
+    <RelativeLayout
+        android:id="@+id/boardContainer"
         android:layout_width="match_parent"
-        android:layout_height="400sp"
-        android:orientation="horizontal"
-        android:padding="10sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="match_parent"
+        android:gravity="center">
+        <GridLayout
+            android:id="@+id/chessBoard"
+            android:layout_width="match_parent"
+            android:layout_height="400sp"
+            android:orientation="horizontal"
+            android:padding="10sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </RelativeLayout>
 
     <ImageButton
         android:id="@+id/imageButton"
