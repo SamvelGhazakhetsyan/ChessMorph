@@ -28,6 +28,7 @@ public class Board extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //ориентация вертикальная
         setContentView(R.layout.activity_board);
 
         chessBoard = findViewById(R.id.chessBoard);
@@ -36,7 +37,7 @@ public class Board extends AppCompatActivity {
     }
 
     private void setupBoard() {
-
+        // row=0
         boardSetup[0][0] = new Rook(0, 0, false);
         boardSetup[0][1] = new Knight(0, 1, false);
         boardSetup[0][2] = new Bishop(0, 2, false);
@@ -51,7 +52,7 @@ public class Board extends AppCompatActivity {
             boardSetup[1][i] = new Pawn(1, i, false);
         }
 
-        // Расставляем черные фигуры
+        // Расставляем черные фигуры, row=7
         boardSetup[7][0] = new Rook(7, 0, true);
         boardSetup[7][1] = new Knight(7, 1, true);
         boardSetup[7][2] = new Bishop(7, 2, true);
@@ -101,13 +102,16 @@ public class Board extends AppCompatActivity {
     }
 
     private void onCellClick(int row, int col, ImageView cell) {
+        System.out.println("row: "+row+" col: "+col);
         if (selectedPiece == null) {
             // Выбираем фигуру
             if (boardSetup[row][col] != null) {
-                selectedPiece = cell;
-                selectedRow = row;
-                selectedCol = col;
-                cell.setBackgroundColor(getResources().getColor(R.color.yellow)); // Подсветка выбранной фигуры
+                if(isWhiteTurn==boardSetup[row][col].isWhite){
+                    selectedPiece = cell;
+                    selectedRow = row;
+                    selectedCol = col;
+                    cell.setBackgroundColor(getResources().getColor(R.color.yellow));// Подсветка выбранной фигуры
+                }
             }
         } else {
             // Проверяем ход
@@ -116,14 +120,23 @@ public class Board extends AppCompatActivity {
                 // Перемещаем фигуру
                 cell.setImageDrawable(selectedPiece.getDrawable());
                 selectedPiece.setImageDrawable(null);
+
+                boardSetup[selectedRow][selectedCol].setY(col);
+                boardSetup[selectedRow][selectedCol].setX(row);
+
                 boardSetup[row][col] = boardSetup[selectedRow][selectedCol];
                 boardSetup[selectedRow][selectedCol] = null;
 
                 // Меняем ход
                 isWhiteTurn = !isWhiteTurn;
+
+
+                System.out.println(boardSetup[row][col].y+"  "+boardSetup[row][col].x);
+                System.out.println(row+"  "+col);
+
             }else {
-                System.out.println(boardSetup[selectedRow][selectedCol].y+"NO"+boardSetup[selectedRow][selectedCol].x);
-                System.out.println(selectedRow+"NO"+selectedCol);
+                System.out.println(boardSetup[selectedRow][selectedCol].y+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+boardSetup[selectedRow][selectedCol].x);
+                System.out.println(selectedRow+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+selectedCol);
             }
             selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
             selectedPiece = null;
@@ -171,9 +184,16 @@ public class Board extends AppCompatActivity {
         protected int x, y, pic;
         protected boolean isWhite;
 
-        public Piece(int x, int y, boolean isWhite) {
+        public void setX(int x) {
             this.x = x;
+        }
+        public void setY(int y) {
             this.y = y;
+        }
+
+        public Piece(int x, int y, boolean isWhite) {
+            this.y = y;
+            this.x = x;
             this.isWhite = isWhite;
         }
         public abstract boolean isValidMove(int newX, int newY);
@@ -188,8 +208,12 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
-            if (x != newX && y != newY) return false; // Ладья двигается только по прямым
-            return isPathClear(x, y, newX, newY); // Проверяем путь
+            if (x != newX && y != newY) return false;
+            if (x==newX && y==newY) return false;// Ладья двигается только по прямым
+            if (isPathClear(x, y, newX, newY)){
+                Piece targetPiece = getPiece(newX, newY);
+                return targetPiece == null || targetPiece.isWhite != this.isWhite;
+            }else return false; // Проверяем путь
         }
     }
     class Bishop extends Piece {
@@ -202,9 +226,13 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
+            if (x==newX && y==newY) return false;
             if (Math.abs(newX - x) != Math.abs(newY - y)) return false; // Только по диагонали
 
-            return isPathClear(x, y, newX, newY);
+            if (isPathClear(x, y, newX, newY)){
+                Piece targetPiece = getPiece(newX, newY);
+                return targetPiece == null || targetPiece.isWhite != this.isWhite;
+            }else return false;
         }
     }
     class Knight extends Piece {
@@ -217,6 +245,7 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
+            if (x==newX && y==newY) return false;
             int dx = Math.abs(newX - x);
             int dy = Math.abs(newY - y);
 
@@ -240,9 +269,14 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
+            if (x==newX && y==newY) return false;
             if (x != newX && y != newY && Math.abs(newX - x) != Math.abs(newY - y)) return false;
 
-            return isPathClear(x, y, newX, newY);
+
+            if (isPathClear(x, y, newX, newY)){
+                Piece targetPiece = getPiece(newX, newY);
+                return targetPiece == null || targetPiece.isWhite != this.isWhite;
+            }else return false;
         }
     }
     class Pawn extends Piece {
@@ -255,15 +289,23 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
-            int direction = isWhite ? 1 : -1;
+            if (x==newX && y==newY) return false;
+            int direction = isWhite ? -1 : 1;
+            System.out.println(x+" "+y+" : "+newX+" "+newY);
 
-            if (newX == x && newY == y + direction) {
+            if (x==1 || x==6){
+                if (newY == y && newX == x + direction*2) {
+                    return !isOccupied(newX, newY); // Вперед только если клетка свободна
+                }
+            }
+            if (newY == y && newX == x + direction) {
                 return !isOccupied(newX, newY); // Вперед только если клетка свободна
             }
 
             // Взятие по диагонали
-            if (Math.abs(newX - x) == 1 && newY == y + direction) {
-                return getPiece(newX, newY) != null; // Должна быть вражеская фигура
+            if (Math.abs(newY - y) == 1 && newX == x + direction) {
+                Piece targetPiece = getPiece(newX, newY);
+                return targetPiece == null || targetPiece.isWhite != this.isWhite; // Должна быть вражеская фигура
             }
 
             return false;
@@ -279,6 +321,7 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
+            if (x==newX && y==newY) return false;
             // Король может ходить максимум на 1 клетку в любом направлении
             if (Math.abs(newX - x) > 1 || Math.abs(newY - y) > 1 || (newX == x && newY == y)) {
                 return false;
