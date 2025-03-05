@@ -11,7 +11,10 @@
         android:id="@+id/boardContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center">
+        android:gravity="center"
+        tools:layout_editor_absoluteX="16dp"
+        tools:layout_editor_absoluteY="-16dp">
+
         <GridLayout
             android:id="@+id/chessBoard"
             android:layout_width="match_parent"
@@ -20,6 +23,7 @@
             android:padding="10sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+
     </RelativeLayout>
 
     <ImageButton

@@ -10,10 +10,14 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Board extends AppCompatActivity {
 
@@ -22,8 +26,12 @@ public class Board extends AppCompatActivity {
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
     private int selectedRow = -1, selectedCol = -1;
-    private boolean isWhiteTurn = true;
+    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false;
+    private Piece BlackKing = new King(0, 4, false);
+    private Piece WhiteKing = new King(7, 4, true);
+    private Piece checker=null;
     private Piece[][] boardSetup = new Piece[8][8];
+    private ImageView[][] cells = new ImageView[8][8];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +50,7 @@ public class Board extends AppCompatActivity {
         boardSetup[0][1] = new Knight(0, 1, false);
         boardSetup[0][2] = new Bishop(0, 2, false);
         boardSetup[0][3] = new Queen(0, 3, false);
-        boardSetup[0][4] = new King(0, 4, false);
+        boardSetup[0][4] = BlackKing;
         boardSetup[0][5] = new Bishop(0, 5, false);
         boardSetup[0][6] = new Knight(0, 6, false);
         boardSetup[0][7] = new Rook(0, 7, false);
@@ -57,7 +65,7 @@ public class Board extends AppCompatActivity {
         boardSetup[7][1] = new Knight(7, 1, true);
         boardSetup[7][2] = new Bishop(7, 2, true);
         boardSetup[7][3] = new Queen(7, 3, true);
-        boardSetup[7][4] = new King(7, 4, true);
+        boardSetup[7][4] = WhiteKing;
         boardSetup[7][5] = new Bishop(7, 5, true);
         boardSetup[7][6] = new Knight(7, 6, true);
         boardSetup[7][7] = new Rook(7, 7, true);
@@ -90,6 +98,7 @@ public class Board extends AppCompatActivity {
                     cell.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                     cell.setPadding(8, 8, 8, 8);
                 }
+                cells[row][col] = cell;
 
                 // Добавляем в GridLayout
                 chessBoard.addView(cell);
@@ -103,6 +112,8 @@ public class Board extends AppCompatActivity {
 
     private void onCellClick(int row, int col, ImageView cell) {
         System.out.println("row: "+row+" col: "+col);
+        boolean hell=false;
+
         if (selectedPiece == null) {
             // Выбираем фигуру
             if (boardSetup[row][col] != null) {
@@ -111,36 +122,66 @@ public class Board extends AppCompatActivity {
                     selectedRow = row;
                     selectedCol = col;
                     cell.setBackgroundColor(getResources().getColor(R.color.yellow));// Подсветка выбранной фигуры
+                    hell=true;
                 }
             }
         } else {
             // Проверяем ход
             if (boardSetup[selectedRow][selectedCol].isValidMove(row, col)) {
                 System.out.println("YES");
-                // Перемещаем фигуру
-                cell.setImageDrawable(selectedPiece.getDrawable());
-                selectedPiece.setImageDrawable(null);
+                Piece eatenPiece = boardSetup[row][col];
+                System.out.println("ORIG: "+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
 
+                // Перемещаем фигуру
                 boardSetup[selectedRow][selectedCol].setY(col);
                 boardSetup[selectedRow][selectedCol].setX(row);
 
                 boardSetup[row][col] = boardSetup[selectedRow][selectedCol];
                 boardSetup[selectedRow][selectedCol] = null;
 
-                // Меняем ход
-                isWhiteTurn = !isWhiteTurn;
+                if (isKingInCheck(isWhiteTurn)){
+                    boardSetup[row][col].setY(selectedCol);
+                    boardSetup[row][col].setX(selectedRow);
+                    boardSetup[selectedRow][selectedCol]=boardSetup[row][col];
+                    boardSetup[row][col]=eatenPiece;
+                    System.out.println(WhiteKing.x+" "+ WhiteKing.y+":"+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
+                }else{
+                    cell.setImageDrawable(selectedPiece.getDrawable());
+                    selectedPiece.setImageDrawable(null);
+
+                    isWhiteTurn = !isWhiteTurn;
+
+                    if(isKingInCheck(isWhiteTurn)){
+                        if(isCheckmate(isWhiteTurn)){
+                            System.out.println("CHECKMATE");
+                            if(isWhiteTurn){
+                                theEndgame("White");
+                            }else{
+                                theEndgame("Black");
+                            }
+                            //startActivity(new Intent(getApplicationContext(),MainActivity.class));
+                            //finish();
+                        }
+                    }
 
 
-                System.out.println(boardSetup[row][col].y+"  "+boardSetup[row][col].x);
-                System.out.println(row+"  "+col);
 
+                    System.out.println(boardSetup[row][col].y+"  "+boardSetup[row][col].x);
+                    System.out.println(row+"  "+col);
+                }
             }else {
                 System.out.println(boardSetup[selectedRow][selectedCol].y+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+boardSetup[selectedRow][selectedCol].x);
                 System.out.println(selectedRow+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+selectedCol);
             }
+
             selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
             selectedPiece = null;
+            isWhiteCheck = isKingInCheck(true);
+            isBlackCheck = isKingInCheck(false);
         }
+        System.out.println("White: "+isWhiteCheck+"   Black: "+isBlackCheck);
+        if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
+
     }
 
     public void backToMenu(View view) {
@@ -174,6 +215,87 @@ public class Board extends AppCompatActivity {
     public Piece getPiece(int x, int y) {
         return boardSetup[x][y];
     }
+
+    public List<int[]> getValidMoves(Piece piece) {
+
+        List<int[]> validMoves = new ArrayList<>();
+        for (int newRow = 0; newRow < 8; newRow++) {
+            for (int newCol = 0; newCol < 8; newCol++) {
+                if (piece.isValidMove(newRow, newCol)) {
+                    validMoves.add(new int[]{newRow, newCol});
+                }
+            }
+        }
+        return validMoves;
+
+    }
+
+    public boolean isKingInCheck(boolean isWhite) {
+        int[] kingPos=new int[2];
+        boolean isCheck=false;
+        if (isWhite){
+            kingPos[0]=WhiteKing.x;
+            kingPos[1]=WhiteKing.y;
+        }
+        else {
+            kingPos[0]=BlackKing.x;
+            kingPos[1]=BlackKing.y;
+        }
+        for (Piece[] row : boardSetup) {
+            for (Piece piece : row) {
+                if (piece != null && piece.isWhite != isWhite) {
+                    if (piece.isValidMove(kingPos[0], kingPos[1])) {
+                        isCheck=true;
+                    }
+                }
+            }
+        }
+        if(isCheck){
+            cells[kingPos[0]][kingPos[1]].setBackgroundColor(getResources().getColor(R.color.red));
+        }else {cells[kingPos[0]][kingPos[1]].setBackgroundColor((kingPos[0] + kingPos[1]) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
+        return isCheck;
+    }
+
+    public boolean isCheckmate(boolean isWhite) {
+        boolean isCheckmate=true;
+        for (Piece[] row : boardSetup) {
+            for (Piece piece : row) {
+                if (piece != null && piece.isWhite == isWhite) {
+                    List<int[]> validMoves=getValidMoves(piece);
+                    for (int[] move : validMoves) {
+                        int tryX=move[0];
+                        int tryY=move[1];
+                        int oldX=piece.x;
+                        int oldY=piece.y;
+
+                        Piece eatenPiece = boardSetup[tryX][tryY];
+
+                        boardSetup[oldX][oldY].setY(tryY);
+                        boardSetup[oldX][oldY].setX(tryX);
+
+                        boardSetup[tryX][tryY] = boardSetup[oldX][oldY];
+                        boardSetup[oldX][oldY] = null;
+
+                        if (!isKingInCheck(isWhite)){
+                            isCheckmate=false;
+                            break;
+                        }
+
+                        boardSetup[tryX][tryY].setY(oldY);
+                        boardSetup[tryX][tryY].setX(oldX);
+                        boardSetup[oldX][oldY]=boardSetup[tryX][tryY];
+                        boardSetup[tryX][tryY]=eatenPiece;
+
+                    }
+                    if (!isCheckmate) break;
+                }
+            }
+            if (!isCheckmate) break;
+        }
+        return isCheckmate;
+    }
+
+
 
 
 
@@ -291,7 +413,7 @@ public class Board extends AppCompatActivity {
         public boolean isValidMove(int newX, int newY) {
             if (x==newX && y==newY) return false;
             int direction = isWhite ? -1 : 1;
-            System.out.println(x+" "+y+" : "+newX+" "+newY);
+            //System.out.println(x+" "+y+" : "+newX+" "+newY);
 
             if (x==1 || x==6){
                 if (newY == y && newX == x + direction*2) {
@@ -305,7 +427,7 @@ public class Board extends AppCompatActivity {
             // Взятие по диагонали
             if (Math.abs(newY - y) == 1 && newX == x + direction) {
                 Piece targetPiece = getPiece(newX, newY);
-                return targetPiece == null || targetPiece.isWhite != this.isWhite; // Должна быть вражеская фигура
+                return targetPiece != null && targetPiece.isWhite != this.isWhite; // Должна быть вражеская фигура
             }
 
             return false;
@@ -338,7 +460,21 @@ public class Board extends AppCompatActivity {
 
 
 
+    public void theEndgame(String color){
+        AlertDialog.Builder endGame = new AlertDialog.Builder(this);
+        endGame.setTitle(color+" wins");
 
+        endGame.setPositiveButton("Back to menu", (dialog, which) -> {
+            backToMenu(null);
+        });
+        endGame.setNegativeButton("Play again", (dialog, which) -> {
+            startActivity(new Intent(getApplicationContext(),Board.class));
+            finish();
+        });
+
+        AlertDialog dialog = endGame.create();
+        dialog.show();
+    }
 
 
 }
