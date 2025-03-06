@@ -26,12 +26,13 @@ public class Board extends AppCompatActivity {
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
     private int selectedRow = -1, selectedCol = -1;
-    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false;
+    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false, morphModeOn=true;
     private Piece BlackKing = new King(0, 4, false);
     private Piece WhiteKing = new King(7, 4, true);
     private Piece checker=null;
     private Piece[][] boardSetup = new Piece[8][8];
     private ImageView[][] cells = new ImageView[8][8];
+    private Piece[][] morphBoard = new Piece[8][8];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,7 +140,7 @@ public class Board extends AppCompatActivity {
                 boardSetup[row][col] = boardSetup[selectedRow][selectedCol];
                 boardSetup[selectedRow][selectedCol] = null;
 
-                if (isKingInCheck(isWhiteTurn)){
+                if (isKingInCheck(isWhiteTurn,true)){
                     boardSetup[row][col].setY(selectedCol);
                     boardSetup[row][col].setX(selectedRow);
                     boardSetup[selectedRow][selectedCol]=boardSetup[row][col];
@@ -149,9 +150,40 @@ public class Board extends AppCompatActivity {
                     cell.setImageDrawable(selectedPiece.getDrawable());
                     selectedPiece.setImageDrawable(null);
 
+                    //chessMorph pice
+                    if(morphModeOn){
+                        System.out.println(boardSetup[row][col].isMorphable);
+                        if(boardSetup[row][col].isMorphable){
+                            System.out.println("AYOOOOOOO");
+                            if (boardSetup[row][col] instanceof Rook) {
+                                morphBoard[selectedRow][selectedCol]=new Rook(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+                            }else if(boardSetup[row][col] instanceof Knight){
+                                morphBoard[selectedRow][selectedCol]=new Knight(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+                            }else if(boardSetup[row][col] instanceof Bishop){
+                                morphBoard[selectedRow][selectedCol]=new Bishop(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+                            }else if(boardSetup[row][col] instanceof Queen){
+                                morphBoard[selectedRow][selectedCol]=new Queen(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+                            }
+
+                            if(morphBoard[row][col]!=null){
+                                if (morphBoard[row][col].isWhite==boardSetup[row][col].isWhite){
+                                    boardSetup[row][col]=morphBoard[row][col];
+                                    morphBoard[row][col]=null;
+                                    cell.setImageResource(boardSetup[row][col].pic);
+                                }else{
+                                    morphBoard[row][col]=null;
+                                }
+                            }
+                        }
+                    }
+
+
+
+
+
                     isWhiteTurn = !isWhiteTurn;
 
-                    if(isKingInCheck(isWhiteTurn)){
+                    if(isKingInCheck(isWhiteTurn,true)){
                         if(isCheckmate(isWhiteTurn)){
                             System.out.println("CHECKMATE");
                             if(isWhiteTurn){
@@ -159,8 +191,20 @@ public class Board extends AppCompatActivity {
                             }else{
                                 theEndgame("Black");
                             }
-                            //startActivity(new Intent(getApplicationContext(),MainActivity.class));
-                            //finish();
+                        }
+                    }
+
+                    if(!isWhiteTurn) {
+                        for (ImageView[] i : cells) {
+                            for (ImageView j : i) {
+                                j.setRotation(180f);
+                            }
+                        }
+                    }else{
+                        for (ImageView[] i : cells) {
+                            for (ImageView j : i) {
+                                j.setRotation(0f);
+                            }
                         }
                     }
 
@@ -176,11 +220,18 @@ public class Board extends AppCompatActivity {
 
             selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
             selectedPiece = null;
-            isWhiteCheck = isKingInCheck(true);
-            isBlackCheck = isKingInCheck(false);
+            isWhiteCheck = isKingInCheck(true,true);
+            isBlackCheck = isKingInCheck(false,true);
         }
         System.out.println("White: "+isWhiteCheck+"   Black: "+isBlackCheck);
         if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
+        if(isKingInCheck(isWhiteTurn,false)){
+            if (boardSetup[selectedRow][selectedCol] instanceof King) {
+                if (selectedRow==row && selectedCol==col&&!hell){
+                    isCheck=isKingInCheck(isWhiteTurn,true);
+                }
+            }
+        }
 
     }
 
@@ -230,7 +281,7 @@ public class Board extends AppCompatActivity {
 
     }
 
-    public boolean isKingInCheck(boolean isWhite) {
+    public boolean isKingInCheck(boolean isWhite,boolean draw) {
         int[] kingPos=new int[2];
         boolean isCheck=false;
         if (isWhite){
@@ -250,25 +301,34 @@ public class Board extends AppCompatActivity {
                 }
             }
         }
-        if(isCheck){
-            cells[kingPos[0]][kingPos[1]].setBackgroundColor(getResources().getColor(R.color.red));
-        }else {cells[kingPos[0]][kingPos[1]].setBackgroundColor((kingPos[0] + kingPos[1]) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
+        if(draw) {
+            if (isCheck) {
+                cells[kingPos[0]][kingPos[1]].setBackgroundColor(getResources().getColor(R.color.red));
+            } else {
+                cells[kingPos[0]][kingPos[1]].setBackgroundColor((kingPos[0] + kingPos[1]) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
+            }
+        }
         return isCheck;
     }
 
     public boolean isCheckmate(boolean isWhite) {
+        int tryX;
+        int tryY;
+        int oldX;
+        int oldY;
+        Piece eatenPiece;
         boolean isCheckmate=true;
         for (Piece[] row : boardSetup) {
             for (Piece piece : row) {
                 if (piece != null && piece.isWhite == isWhite) {
                     List<int[]> validMoves=getValidMoves(piece);
                     for (int[] move : validMoves) {
-                        int tryX=move[0];
-                        int tryY=move[1];
-                        int oldX=piece.x;
-                        int oldY=piece.y;
+                        tryX=move[0];
+                        tryY=move[1];
+                        oldX=piece.x;
+                        oldY=piece.y;
 
-                        Piece eatenPiece = boardSetup[tryX][tryY];
+                        eatenPiece = boardSetup[tryX][tryY];
 
                         boardSetup[oldX][oldY].setY(tryY);
                         boardSetup[oldX][oldY].setX(tryX);
@@ -276,9 +336,8 @@ public class Board extends AppCompatActivity {
                         boardSetup[tryX][tryY] = boardSetup[oldX][oldY];
                         boardSetup[oldX][oldY] = null;
 
-                        if (!isKingInCheck(isWhite)){
+                        if (!isKingInCheck(isWhite,false)){
                             isCheckmate=false;
-                            break;
                         }
 
                         boardSetup[tryX][tryY].setY(oldY);
@@ -286,9 +345,12 @@ public class Board extends AppCompatActivity {
                         boardSetup[oldX][oldY]=boardSetup[tryX][tryY];
                         boardSetup[tryX][tryY]=eatenPiece;
 
+                        if (!isCheckmate) break;
+
                     }
                     if (!isCheckmate) break;
                 }
+                if (!isCheckmate) break;
             }
             if (!isCheckmate) break;
         }
@@ -304,7 +366,7 @@ public class Board extends AppCompatActivity {
 
     abstract class Piece {
         protected int x, y, pic;
-        protected boolean isWhite;
+        protected boolean isWhite, isMorphable;
 
         public void setX(int x) {
             this.x = x;
@@ -326,6 +388,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.rook_white;
             }else pic=R.drawable.rook_black;
+            isMorphable=true;
         }
 
         @Override
@@ -344,6 +407,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.bishop_white;
             }else pic=R.drawable.bishop_black;
+            isMorphable=true;
         }
 
         @Override
@@ -363,6 +427,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.knight_white;
             }else pic=R.drawable.knight_black;
+            isMorphable=true;
         }
 
         @Override
@@ -387,6 +452,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.queen_white;
             }else pic=R.drawable.queen_black;
+            isMorphable=true;
         }
 
         @Override
@@ -407,6 +473,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.pawn_white;
             }else pic=R.drawable.pawn_black;
+            isMorphable=false;
         }
 
         @Override
@@ -439,6 +506,7 @@ public class Board extends AppCompatActivity {
             if (isWhite) {
                 pic=R.drawable.king_white;
             }else pic=R.drawable.king_black;
+            isMorphable=false;
         }
 
         @Override
@@ -454,6 +522,7 @@ public class Board extends AppCompatActivity {
             return targetPiece == null || targetPiece.isWhite != this.isWhite;
         }
     }
+
 
 
 
