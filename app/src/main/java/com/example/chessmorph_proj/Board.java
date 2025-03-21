@@ -2,12 +2,16 @@ package com.example.chessmorph_proj;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -25,14 +29,20 @@ public class Board extends AppCompatActivity {
     private static final int BOARD_SIZE = 8;
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
-    private int selectedRow = -1, selectedCol = -1;
+    private int selectedRow = -1, selectedCol = -1, circle=R.drawable.gray_circle, krug=R.drawable.gray_krug_24;
     private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false, morphModeOn=true;
     private Piece BlackKing = new King(0, 4, false);
     private Piece WhiteKing = new King(7, 4, true);
     private Piece checker=null;
+    private List<int[]> validMovesForDraw;
     private Piece[][] boardSetup = new Piece[8][8];
     private ImageView[][] cells = new ImageView[8][8];
     private Piece[][] morphBoard = new Piece[8][8];
+
+    private TextView whiteTimerText, blackTimerText;
+    private CountDownTimer whiteTimer, blackTimer;
+    private long whiteTimeLeft = 300000; // 5
+    private long blackTimeLeft = 300000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +53,12 @@ public class Board extends AppCompatActivity {
         chessBoard = findViewById(R.id.chessBoard);
 
         setupBoard();
+
+        whiteTimerText = findViewById(R.id.whiteTimer);
+        blackTimerText = findViewById(R.id.blackTimer);
+
+        updateTimerUI();
+        startWhiteTimer();
     }
 
     private void setupBoard() {
@@ -93,8 +109,22 @@ public class Board extends AppCompatActivity {
                 cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
 
                 // Если в клетке есть фигура, устанавливаем изображение
+
+                //cell.setScaleType(ImageView.ScaleType.CENTER);
+                //cell.setImageResource(krug);
+
                 if (boardSetup[row][col] != null) {
-                    cell.setImageResource(boardSetup[row][col].pic);
+
+                    //Drawable overlay = getResources().getDrawable(boardSetup[row][col].pic);
+                    //Drawable background = getResources().getDrawable(circle);
+
+                    //Drawable[] layers = new Drawable[]{background, overlay};
+                    //LayerDrawable layerDrawable = new LayerDrawable(layers);
+
+
+                    cell.setImageDrawable(getResources().getDrawable(boardSetup[row][col].pic));
+
+
                     cell.setAdjustViewBounds(true);
                     cell.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                     cell.setPadding(8, 8, 8, 8);
@@ -124,6 +154,25 @@ public class Board extends AppCompatActivity {
                     selectedCol = col;
                     cell.setBackgroundColor(getResources().getColor(R.color.yellow));// Подсветка выбранной фигуры
                     hell=true;
+
+                    if (boardSetup[row][col] instanceof King){
+                        validMovesForDraw=getKingsValidMoves(boardSetup[row][col]);
+                    }else{
+                        validMovesForDraw=getValidMovesForCheck(boardSetup[row][col]);
+                    }
+                    for (int[] move : validMovesForDraw) {
+                        if (boardSetup[move[0]][move[1]] != null) {
+                            Drawable overlay = getResources().getDrawable(boardSetup[move[0]][move[1]].pic);
+                            Drawable background = getResources().getDrawable(circle);
+
+                            Drawable[] layers = new Drawable[]{background, overlay};
+                            LayerDrawable layerDrawable = new LayerDrawable(layers);
+                            cells[move[0]][move[1]].setImageDrawable(layerDrawable);
+                        }else {
+                            cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER);
+                            cells[move[0]][move[1]].setImageResource(krug);
+                        }
+                    }
                 }
             }
         } else {
@@ -150,7 +199,7 @@ public class Board extends AppCompatActivity {
                     cell.setImageDrawable(selectedPiece.getDrawable());
                     selectedPiece.setImageDrawable(null);
 
-                    //chessMorph pice
+                    //chessMorph part
                     if(morphModeOn){
                         System.out.println(boardSetup[row][col].isMorphable);
                         if(boardSetup[row][col].isMorphable){
@@ -179,7 +228,13 @@ public class Board extends AppCompatActivity {
 
 
 
-
+                    if (isWhiteTurn) {
+                        startBlackTimer();
+                        whiteTimer.cancel();
+                    } else {
+                        startWhiteTimer();
+                        blackTimer.cancel();
+                    }
 
                     isWhiteTurn = !isWhiteTurn;
 
@@ -187,9 +242,9 @@ public class Board extends AppCompatActivity {
                         if(isCheckmate(isWhiteTurn)){
                             System.out.println("CHECKMATE");
                             if(isWhiteTurn){
-                                theEndgame("White");
-                            }else{
                                 theEndgame("Black");
+                            }else{
+                                theEndgame("White");
                             }
                         }
                     }
@@ -213,6 +268,8 @@ public class Board extends AppCompatActivity {
                     System.out.println(boardSetup[row][col].y+"  "+boardSetup[row][col].x);
                     System.out.println(row+"  "+col);
                 }
+
+
             }else {
                 System.out.println(boardSetup[selectedRow][selectedCol].y+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+boardSetup[selectedRow][selectedCol].x);
                 System.out.println(selectedRow+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+selectedCol);
@@ -222,6 +279,19 @@ public class Board extends AppCompatActivity {
             selectedPiece = null;
             isWhiteCheck = isKingInCheck(true,true);
             isBlackCheck = isKingInCheck(false,true);
+
+
+            for (int[] move : validMovesForDraw) {
+                if (boardSetup[move[0]][move[1]] != null) {
+                    cells[move[0]][move[1]].setImageDrawable(getResources().getDrawable(boardSetup[move[0]][move[1]].pic));
+                    cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                }else {
+                cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                cells[move[0]][move[1]].setImageDrawable(null);
+                }
+            }
+            validMovesForDraw=null;
+
         }
         System.out.println("White: "+isWhiteCheck+"   Black: "+isBlackCheck);
         if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
@@ -279,6 +349,66 @@ public class Board extends AppCompatActivity {
         }
         return validMoves;
 
+    }
+    public List<int[]> getKingsValidMoves(Piece piece) {
+
+        List<int[]> validMoves = getValidMoves(piece);
+
+        List<int[]> kingsValidMoves = new ArrayList<>();
+
+        for (int[] move : validMoves) {
+            Piece eatenPiece = boardSetup[move[0]][move[1]];
+
+            boardSetup[selectedRow][selectedCol].setY(move[1]);
+            boardSetup[selectedRow][selectedCol].setX(move[0]);
+
+            boardSetup[move[0]][move[1]] = boardSetup[selectedRow][selectedCol];
+            boardSetup[selectedRow][selectedCol] = null;
+
+            if (isKingInCheck(isWhiteTurn, false)) {
+                boardSetup[move[0]][move[1]].setY(selectedCol);
+                boardSetup[move[0]][move[1]].setX(selectedRow);
+                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]] = eatenPiece;
+            }else{
+                boardSetup[move[0]][move[1]].setY(selectedCol);
+                boardSetup[move[0]][move[1]].setX(selectedRow);
+                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]] = eatenPiece;
+                kingsValidMoves.add(new int[]{move[0], move[1]});
+            }
+        }
+        return kingsValidMoves;
+    }
+    public List<int[]> getValidMovesForCheck(Piece piece) {
+
+        List<int[]> validMoves = getValidMoves(piece);
+
+        List<int[]> ValidMovesForCheck = new ArrayList<>();
+
+        for (int[] move : validMoves) {
+            Piece eatenPiece = boardSetup[move[0]][move[1]];
+
+            boardSetup[selectedRow][selectedCol].setY(move[1]);
+            boardSetup[selectedRow][selectedCol].setX(move[0]);
+
+            boardSetup[move[0]][move[1]] = boardSetup[selectedRow][selectedCol];
+            boardSetup[selectedRow][selectedCol] = null;
+
+            if (isKingInCheck(isWhiteTurn, false)) {
+                boardSetup[move[0]][move[1]].setY(selectedCol);
+                boardSetup[move[0]][move[1]].setX(selectedRow);
+                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]] = eatenPiece;
+            }else{
+                boardSetup[move[0]][move[1]].setY(selectedCol);
+                boardSetup[move[0]][move[1]].setX(selectedRow);
+                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]] = eatenPiece;
+                ValidMovesForCheck.add(new int[]{move[0], move[1]});
+            }
+        }
+        return ValidMovesForCheck;
     }
 
     public boolean isKingInCheck(boolean isWhite,boolean draw) {
@@ -524,6 +654,46 @@ public class Board extends AppCompatActivity {
     }
 
 
+
+
+
+
+
+    private void startWhiteTimer() {
+        if (whiteTimer != null) whiteTimer.cancel();
+        whiteTimer = new CountDownTimer(whiteTimeLeft, 1000) {
+            public void onTick(long millisUntilFinished) {
+                whiteTimeLeft = millisUntilFinished;
+                updateTimerUI();
+            }
+
+            public void onFinish() {
+                theEndgame("Black");
+            }
+        }.start();
+    }
+    private void startBlackTimer() {
+        if (blackTimer != null) blackTimer.cancel();
+        blackTimer = new CountDownTimer(blackTimeLeft, 1000) {
+            public void onTick(long millisUntilFinished) {
+                blackTimeLeft = millisUntilFinished;
+                updateTimerUI();
+            }
+
+            public void onFinish() {
+                theEndgame("White");
+            }
+        }.start();
+    }
+    private void updateTimerUI() {
+        whiteTimerText.setText(formatTime(whiteTimeLeft));
+        blackTimerText.setText(formatTime(blackTimeLeft));
+    }
+    private String formatTime(long millis) {
+        int minutes = (int) (millis / 60000);
+        int seconds = (int) (millis % 60000 / 1000);
+        return String.format("%02d:%02d", minutes, seconds);
+    }
 
 
 

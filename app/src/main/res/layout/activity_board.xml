@@ -7,25 +7,23 @@
     android:layout_height="match_parent"
     tools:context=".Board">
 
-    <RelativeLayout
-        android:id="@+id/boardContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        tools:layout_editor_absoluteX="16dp"
-        tools:layout_editor_absoluteY="-16dp">
+    <!-- Шахматная доска -->
+    <GridLayout
+        android:id="@+id/chessBoard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:columnCount="8"
+        android:rowCount="8"
+        android:padding="10dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintWidth_percent="0.9"
+        app:layout_constraintHeight_percent="0.9"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <GridLayout
-            android:id="@+id/chessBoard"
-            android:layout_width="match_parent"
-            android:layout_height="400sp"
-            android:orientation="horizontal"
-            android:padding="10sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-    </RelativeLayout>
-
+    <!-- Кнопка "Назад" -->
     <ImageButton
         android:id="@+id/imageButton"
         android:layout_width="wrap_content"
@@ -34,4 +32,34 @@
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@android:drawable/ic_media_play"
         android:onClick="backToMenu"/>
+
+    <TextView
+        android:id="@+id/blackTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:layout_marginBottom="4dp"
+        android:text="00:00"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/chessBoard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/whiteTimer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:layout_marginTop="52dp"
+        android:layout_marginEnd="52dp"
+        android:text="00:00"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/chessBoard" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
