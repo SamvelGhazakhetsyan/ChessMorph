@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ChessGameSettings">
+
+    <ImageButton
+        android:id="@+id/imageButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@android:drawable/ic_media_play"
+        android:onClick="backToMenu"/>
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="377dp"
+        android:layout_height="45dp"
+        android:onClick="play"
+        android:text="Start a game"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.529"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.79" />
+
+    <Spinner
+        android:id="@+id/spinner_options_mode"
+        android:layout_width="265dp"
+        android:layout_height="46dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/spinner_options_time"
+        app:layout_constraintHorizontal_bias="0.89"
+        app:layout_constraintStart_toStartOf="@+id/spinner_options_time"
+        app:layout_constraintTop_toBottomOf="@+id/spinner_options_time"
+        app:layout_constraintVertical_bias="0.157" />
+
+    <Spinner
+        android:id="@+id/spinner_options_time"
+        android:layout_width="265dp"
+        android:layout_height="49dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.89"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.225" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="70dp"
+        android:layout_height="29dp"
+        android:text="Time"
+        android:textSize="25sp"
+        app:layout_constraintBottom_toBottomOf="@+id/spinner_options_time"
+        app:layout_constraintEnd_toStartOf="@+id/spinner_options_time"
+        app:layout_constraintHorizontal_bias="0.433"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/spinner_options_time"
+        app:layout_constraintVertical_bias="0.65" />
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="70dp"
+        android:layout_height="29dp"
+        android:text="Mode"
+        android:textSize="25sp"
+        app:layout_constraintBottom_toBottomOf="@+id/spinner_options_mode"
+        app:layout_constraintEnd_toStartOf="@+id/spinner_options_mode"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/textView3"
+        app:layout_constraintTop_toTopOf="@+id/spinner_options_mode"
+        app:layout_constraintVertical_bias="0.588" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,42 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <ImageButton
+            android:id="@+id/queenButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/queen_black" />
+
+        <ImageButton
+            android:id="@+id/rookButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/rook_black" />
+
+        <ImageButton
+            android:id="@+id/bishopButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/bishop_black" />
+
+        <ImageButton
+            android:id="@+id/knightButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackground"
+            android:src="@drawable/knight_black" />
+    </LinearLayout>
+</LinearLayout>

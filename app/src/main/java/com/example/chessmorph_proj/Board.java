@@ -6,9 +6,12 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -21,7 +24,15 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class Board extends AppCompatActivity {
 
@@ -30,7 +41,7 @@ public class Board extends AppCompatActivity {
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
     private int selectedRow = -1, selectedCol = -1, circle=R.drawable.gray_circle, krug=R.drawable.gray_krug_24;
-    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false, morphModeOn=true;
+    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false, morphModeOn=true, turnTheBoardOn=true, canMove = false, isOnlineGame, isWhite=true;
     private Piece BlackKing = new King(0, 4, false);
     private Piece WhiteKing = new King(7, 4, true);
     private Piece checker=null;
@@ -41,14 +52,36 @@ public class Board extends AppCompatActivity {
 
     private TextView whiteTimerText, blackTimerText;
     private CountDownTimer whiteTimer, blackTimer;
-    private long whiteTimeLeft = 300000; // 5
-    private long blackTimeLeft = 300000;
+    private long whiteTimeLeft = 300000, blackTimeLeft = 300000, plusTime=0; // 5
+    private String gameId, userId, onlineTurn, opponentId;
+    DatabaseReference gameRef;
+
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //ориентация вертикальная
         setContentView(R.layout.activity_board);
+
+        isOnlineGame = getIntent().getBooleanExtra("isOnlineGame", false);
+        whiteTimeLeft= getIntent().getLongExtra("time", 300000);
+        blackTimeLeft=whiteTimeLeft;
+        plusTime=getIntent().getLongExtra("plusTime", 0);
+        morphModeOn=getIntent().getBooleanExtra("morphModeOn", false);
+        gameId=getIntent().getStringExtra("gameId");
+        userId=getIntent().getStringExtra("userId");
+        isWhite=getIntent().getBooleanExtra("isWhite", true);
+        isWhite=(isOnlineGame)?isWhite:true;
+        /*gameRef.child("turn").get().addOnSuccessListener(snapshot -> {
+            onlineTurn = snapshot.getValue(String.class);
+        });*/
+        if(isOnlineGame){
+            gameRef = FirebaseDatabase.getInstance().getReference("games").child(gameId);
+            listenForMoves();
+        }
 
         chessBoard = findViewById(R.id.chessBoard);
 
@@ -139,6 +172,14 @@ public class Board extends AppCompatActivity {
                 cell.setOnClickListener(v -> onCellClick(finalRow, finalCol, cell));
             }
         }
+        if (!isWhite){
+            chessBoard.setRotation(180f);
+            for (ImageView[] i : cells) {
+                for (ImageView j : i) {
+                    j.setRotation(180f);
+                }
+            }
+        }
     }
 
     private void onCellClick(int row, int col, ImageView cell) {
@@ -148,29 +189,31 @@ public class Board extends AppCompatActivity {
         if (selectedPiece == null) {
             // Выбираем фигуру
             if (boardSetup[row][col] != null) {
-                if(isWhiteTurn==boardSetup[row][col].isWhite){
-                    selectedPiece = cell;
-                    selectedRow = row;
-                    selectedCol = col;
-                    cell.setBackgroundColor(getResources().getColor(R.color.yellow));// Подсветка выбранной фигуры
-                    hell=true;
+                if(!isOnlineGame || (isOnlineGame&&boardSetup[row][col].isWhite==isWhite)) {
+                    if (isWhiteTurn == boardSetup[row][col].isWhite) {
+                        selectedPiece = cell;
+                        selectedRow = row;
+                        selectedCol = col;
+                        cell.setBackgroundColor(getResources().getColor(R.color.yellow));// Подсветка выбранной фигуры
+                        hell = true;
 
-                    if (boardSetup[row][col] instanceof King){
-                        validMovesForDraw=getKingsValidMoves(boardSetup[row][col]);
-                    }else{
-                        validMovesForDraw=getValidMovesForCheck(boardSetup[row][col]);
-                    }
-                    for (int[] move : validMovesForDraw) {
-                        if (boardSetup[move[0]][move[1]] != null) {
-                            Drawable overlay = getResources().getDrawable(boardSetup[move[0]][move[1]].pic);
-                            Drawable background = getResources().getDrawable(circle);
+                        if (boardSetup[row][col] instanceof King) {
+                            validMovesForDraw = getKingsValidMoves(boardSetup[row][col]);
+                        } else {
+                            validMovesForDraw = getValidMovesForCheck(boardSetup[row][col]);
+                        }
+                        for (int[] move : validMovesForDraw) {
+                            if (boardSetup[move[0]][move[1]] != null) {
+                                Drawable overlay = getResources().getDrawable(boardSetup[move[0]][move[1]].pic);
+                                Drawable background = getResources().getDrawable(circle);
 
-                            Drawable[] layers = new Drawable[]{background, overlay};
-                            LayerDrawable layerDrawable = new LayerDrawable(layers);
-                            cells[move[0]][move[1]].setImageDrawable(layerDrawable);
-                        }else {
-                            cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER);
-                            cells[move[0]][move[1]].setImageResource(krug);
+                                Drawable[] layers = new Drawable[]{background, overlay};
+                                LayerDrawable layerDrawable = new LayerDrawable(layers);
+                                cells[move[0]][move[1]].setImageDrawable(layerDrawable);
+                            } else {
+                                cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER);
+                                cells[move[0]][move[1]].setImageResource(krug);
+                            }
                         }
                     }
                 }
@@ -196,69 +239,93 @@ public class Board extends AppCompatActivity {
                     boardSetup[row][col]=eatenPiece;
                     System.out.println(WhiteKing.x+" "+ WhiteKing.y+":"+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
                 }else{
+
+                    if (boardSetup[row][col] instanceof Pawn) {
+                        if ((boardSetup[row][col].isWhite && row == 0) || (!boardSetup[row][col].isWhite && row == 7)) {
+                            promotePawn(row, col, boardSetup[row][col].isWhite);
+
+                        }
+                    }
+
                     cell.setImageDrawable(selectedPiece.getDrawable());
                     selectedPiece.setImageDrawable(null);
 
+
                     //chessMorph part
                     if(morphModeOn){
-                        System.out.println(boardSetup[row][col].isMorphable);
-                        if(boardSetup[row][col].isMorphable){
-                            System.out.println("AYOOOOOOO");
-                            if (boardSetup[row][col] instanceof Rook) {
-                                morphBoard[selectedRow][selectedCol]=new Rook(selectedRow, selectedCol, boardSetup[row][col].isWhite);
-                            }else if(boardSetup[row][col] instanceof Knight){
-                                morphBoard[selectedRow][selectedCol]=new Knight(selectedRow, selectedCol, boardSetup[row][col].isWhite);
-                            }else if(boardSetup[row][col] instanceof Bishop){
-                                morphBoard[selectedRow][selectedCol]=new Bishop(selectedRow, selectedCol, boardSetup[row][col].isWhite);
-                            }else if(boardSetup[row][col] instanceof Queen){
-                                morphBoard[selectedRow][selectedCol]=new Queen(selectedRow, selectedCol, boardSetup[row][col].isWhite);
-                            }
-
-                            if(morphBoard[row][col]!=null){
-                                if (morphBoard[row][col].isWhite==boardSetup[row][col].isWhite){
-                                    boardSetup[row][col]=morphBoard[row][col];
-                                    morphBoard[row][col]=null;
-                                    cell.setImageResource(boardSetup[row][col].pic);
-                                }else{
-                                    morphBoard[row][col]=null;
-                                }
-                            }
-                        }
+                        morphMode(row,col,selectedRow,selectedCol,cell);
                     }
+
+
 
 
 
                     if (isWhiteTurn) {
                         startBlackTimer();
+                        whiteTimeLeft+=plusTime;
                         whiteTimer.cancel();
                     } else {
                         startWhiteTimer();
+                        blackTimeLeft+=plusTime;
                         blackTimer.cancel();
                     }
 
+
+                    if(isOnlineGame){
+                        sendMove(gameId,selectedRow, selectedCol, row, col);
+                    }
+
                     isWhiteTurn = !isWhiteTurn;
+
 
                     if(isKingInCheck(isWhiteTurn,true)){
                         if(isCheckmate(isWhiteTurn)){
                             System.out.println("CHECKMATE");
                             if(isWhiteTurn){
-                                theEndgame("Black");
+                                theEndgame("Black wins",false);
                             }else{
-                                theEndgame("White");
+                                theEndgame("White wins",false);
                             }
                         }
                     }
-
-                    if(!isWhiteTurn) {
-                        for (ImageView[] i : cells) {
-                            for (ImageView j : i) {
-                                j.setRotation(180f);
+                    /*for (int x = 0; x < 8; x++) {
+                        canMove=false;
+                        for (int y = 0; y < 8; y++) {
+                            if (boardSetup[x][y] != null) {
+                                System.out.println("AAAAA111111");
+                                if(boardSetup[x][y].isWhite != isWhiteTurn){
+                                    System.out.println("BBBBB22222");
+                                    List<int[]> validMoves = getValidMoves(boardSetup[x][y]);
+                                    System.out.println("CCCCC33333");
+                                    if (validMoves != null && !validMoves.isEmpty()) {
+                                        canMove = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
-                    }else{
-                        for (ImageView[] i : cells) {
-                            for (ImageView j : i) {
-                                j.setRotation(0f);
+                        if (canMove) {
+                            break;
+                        }
+                    }
+                    if(!canMove){
+                        theEndgame("Draw",false);
+                    }
+                    */
+
+
+                    if (turnTheBoardOn&&!isOnlineGame) {
+                        if (!isWhiteTurn) {
+                            for (ImageView[] i : cells) {
+                                for (ImageView j : i) {
+                                    j.setRotation(180f);
+                                }
+                            }
+                        } else {
+                            for (ImageView[] i : cells) {
+                                for (ImageView j : i) {
+                                    j.setRotation(0f);
+                                }
                             }
                         }
                     }
@@ -614,9 +681,10 @@ public class Board extends AppCompatActivity {
 
             if (x==1 || x==6){
                 if (newY == y && newX == x + direction*2) {
-                    return !isOccupied(newX, newY); // Вперед только если клетка свободна
+                    return (isPathClear(x,y, newX, newY) && !isOccupied(newX,newY)); // Вперед только если клетка свободна
                 }
             }
+
             if (newY == y && newX == x + direction) {
                 return !isOccupied(newX, newY); // Вперед только если клетка свободна
             }
@@ -655,6 +723,98 @@ public class Board extends AppCompatActivity {
 
 
 
+    private void move(int selectedRow,int selectedCol, int row, int col, ImageView cell,ImageView selectedPiece){
+        if (boardSetup[selectedRow][selectedCol]==null){
+            return;
+        }
+        isWhiteTurn = !isWhiteTurn;
+        Piece eatenPiece = boardSetup[row][col];
+
+        // Перемещаем фигуру
+        boardSetup[selectedRow][selectedCol].setY(col);
+        boardSetup[selectedRow][selectedCol].setX(row);
+
+        boardSetup[row][col] = boardSetup[selectedRow][selectedCol];
+        boardSetup[selectedRow][selectedCol] = null;
+
+        if (isKingInCheck(!isWhiteTurn,true)){
+            boardSetup[row][col].setY(selectedCol);
+            boardSetup[row][col].setX(selectedRow);
+            boardSetup[selectedRow][selectedCol]=boardSetup[row][col];
+            boardSetup[row][col]=eatenPiece;
+            System.out.println(WhiteKing.x+" "+ WhiteKing.y+":"+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
+        }else{
+            if (boardSetup[row][col] instanceof Pawn) {
+                if ((boardSetup[row][col].isWhite && row == 0) || (!boardSetup[row][col].isWhite && row == 7)) {
+                    promotePawn(row, col, boardSetup[row][col].isWhite);
+
+                }
+            }
+
+            cell.setImageDrawable(selectedPiece.getDrawable());
+            selectedPiece.setImageDrawable(null);
+
+
+            //chessMorph part
+            if(morphModeOn){
+                morphMode(row,col,selectedRow,selectedCol,cell);
+            }
+
+
+
+
+
+            if (!isWhiteTurn) {
+                startBlackTimer();
+                whiteTimeLeft+=plusTime;
+                whiteTimer.cancel();
+            } else {
+                startWhiteTimer();
+                blackTimeLeft+=plusTime;
+                blackTimer.cancel();
+            }
+
+
+
+            if(isKingInCheck(isWhiteTurn,true)){
+                if(isCheckmate(isWhiteTurn)){
+                    System.out.println("CHECKMATE");
+                    if(isWhiteTurn){
+                        theEndgame("Black wins",false);
+                    }else{
+                        theEndgame("White wins",false);
+                    }
+                }
+            }
+        }
+    }
+
+    private void morphMode(int row,int col,int selectedRow,int selectedCol, ImageView cell){
+        if(boardSetup[row][col].isMorphable){
+            if (boardSetup[row][col] instanceof Rook) {
+                morphBoard[selectedRow][selectedCol]=new Rook(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+            }else if(boardSetup[row][col] instanceof Knight){
+                morphBoard[selectedRow][selectedCol]=new Knight(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+            }else if(boardSetup[row][col] instanceof Bishop){
+                morphBoard[selectedRow][selectedCol]=new Bishop(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+            }else if(boardSetup[row][col] instanceof Queen){
+                morphBoard[selectedRow][selectedCol]=new Queen(selectedRow, selectedCol, boardSetup[row][col].isWhite);
+            }
+
+            if(morphBoard[row][col]!=null){
+                if (morphBoard[row][col].isWhite==boardSetup[row][col].isWhite){
+                    boardSetup[row][col]=morphBoard[row][col];
+                    morphBoard[row][col]=null;
+                    cell.setImageResource(boardSetup[row][col].pic);
+                }else{
+                    morphBoard[row][col]=null;
+                }
+            }
+        }
+    }
+
+
+
 
 
 
@@ -668,7 +828,7 @@ public class Board extends AppCompatActivity {
             }
 
             public void onFinish() {
-                theEndgame("Black");
+                theEndgame("Black wins by time",true);
             }
         }.start();
     }
@@ -681,7 +841,7 @@ public class Board extends AppCompatActivity {
             }
 
             public void onFinish() {
-                theEndgame("White");
+                theEndgame("White wins by time",true);
             }
         }.start();
     }
@@ -695,16 +855,156 @@ public class Board extends AppCompatActivity {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
+    public void sendMove(String gameId, int x1, int y1, int x2, int y2) {
+        DatabaseReference gameRef = FirebaseDatabase.getInstance().getReference("games").child(gameId).child("lastMove");
+
+        Map<String, Object> moveData = new HashMap<>();
+        moveData.put("x1", x1);
+        moveData.put("y1", y1);
+        moveData.put("x2", x2);
+        moveData.put("y2", y2);
+
+        gameRef.setValue(moveData)
+                .addOnSuccessListener(aVoid -> Log.d("Chess", "Ход отправлен: " + x1 + "," + y1 + " → " + x2 + "," + y2))
+                .addOnFailureListener(e -> Log.w("Firebase", "Ошибка отправки хода", e));
+        getOpponentId(gameId, opponentId -> {
+            DatabaseReference turnRef = FirebaseDatabase.getInstance().getReference("games").child(gameId).child("turn");
+            turnRef.setValue(opponentId);
+        });
+    }
+    public void listenForMoves() {
+
+
+        gameRef.child("lastMove").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Integer x1 = snapshot.child("x1").getValue(Integer.class);
+                    Integer y1 = snapshot.child("y1").getValue(Integer.class);
+                    Integer x2 = snapshot.child("x2").getValue(Integer.class);
+                    Integer y2 = snapshot.child("y2").getValue(Integer.class);
+
+                    if (x1 != null && y1 != null && x2 != null && y2 != null) {
+                        if (isWhite != isWhiteTurn) {
+
+                            move(x1, y1, x2, y2, cells[x2][y2], cells[x1][y1]);
+
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.w("Firebase", "Ошибка получения хода", error.toException());
+            }
+        });
+
+    }
+
+    public void getOpponentId(String gameId, OnOpponentIdReceived callback) {
+        DatabaseReference playersRef = FirebaseDatabase.getInstance().getReference("games").child(gameId).child("players");
+
+        playersRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (!snapshot.exists()) return;
+
+                for (DataSnapshot playerSnapshot : snapshot.getChildren()) {
+                    String playerId = playerSnapshot.getValue(String.class); // Берем значение, а не ключ!
+
+                    if (!playerId.equals(userId)) {
+                        callback.onReceived(playerId); // Теперь будет реальный UID
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.w("Firebase", "Ошибка получения opponentId", error.toException());
+            }
+        });
+    }
+
+
+    // Интерфейс для передачи данных
+    public interface OnOpponentIdReceived {
+        void onReceived(String opponentId);
+    }
+
+
+    private void promotePawn(final int row, final int col, final boolean isWhite) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_pawn_promotion, null);
+        builder.setView(dialogView);
+
+        ImageButton queenButton = dialogView.findViewById(R.id.queenButton);
+        ImageButton rookButton = dialogView.findViewById(R.id.rookButton);
+        ImageButton bishopButton = dialogView.findViewById(R.id.bishopButton);
+        ImageButton knightButton = dialogView.findViewById(R.id.knightButton);
+
+        if(isWhite){
+            queenButton.setImageResource(R.drawable.queen_white);
+            rookButton.setImageResource(R.drawable.rook_white);
+            bishopButton.setImageResource(R.drawable.bishop_white);
+            knightButton.setImageResource(R.drawable.knight_white);
+        }
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        if (!isWhite) {
+            dialog.getWindow().getDecorView().post(() ->
+                    dialog.getWindow().getDecorView().setRotation(180f)
+            );
+        }
+
+        View.OnClickListener listener = v -> {
+            Piece newPiece = null;
+            if(isWhite) {
+                if (v == queenButton) newPiece = new Queen(row, col, isWhite);
+                else if (v == rookButton) newPiece = new Rook(row, col, isWhite);
+                else if (v == bishopButton) newPiece = new Bishop(row, col, isWhite);
+                else if (v == knightButton) newPiece = new Knight(row, col, isWhite);
+            }else{
+                if (v == knightButton) newPiece = new Queen(row, col, isWhite);
+                else if (v == bishopButton) newPiece = new Rook(row, col, isWhite);
+                else if (v == rookButton) newPiece = new Bishop(row, col, isWhite);
+                else if (v == queenButton) newPiece = new Knight(row, col, isWhite);
+            }
+            if (newPiece != null) {
+                boardSetup[row][col] = newPiece;
+                cells[row][col].setImageDrawable(getResources().getDrawable(newPiece.pic));
+            }
+            dialog.dismiss();
+        };
+
+        queenButton.setOnClickListener(listener);
+        rookButton.setOnClickListener(listener);
+        bishopButton.setOnClickListener(listener);
+        knightButton.setOnClickListener(listener);
+    }
 
 
 
 
-    public void theEndgame(String color){
+
+
+
+
+    public void theEndgame(String text, boolean withTime){
+        if(!withTime){
+            whiteTimer.cancel();
+            blackTimer.cancel();
+        }
         AlertDialog.Builder endGame = new AlertDialog.Builder(this);
-        endGame.setTitle(color+" wins");
+        endGame.setTitle(text);
 
         endGame.setPositiveButton("Back to menu", (dialog, which) -> {
-            backToMenu(null);
+            startActivity(new Intent(getApplicationContext(),MainActivity.class));
+            finish();
         });
         endGame.setNegativeButton("Play again", (dialog, which) -> {
             startActivity(new Intent(getApplicationContext(),Board.class));
