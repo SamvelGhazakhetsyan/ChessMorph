@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -26,10 +27,11 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import androidx.appcompat.app.AlertDialog;
 
 public class ChessGameSettings extends AppCompatActivity {
     private Random random = new Random();
-    private boolean morphModeOn, isOnlineGame, isWhite = random.nextBoolean();
+    private boolean morphModeOn, isOnlineGame, isWhite = random.nextBoolean(),gameFound=false;
     private long time=300000, plusTime=0;
     FirebaseAuth fAuth;
     private String mode="classic", userId, gameId;
@@ -152,12 +154,54 @@ public class ChessGameSettings extends AppCompatActivity {
         intent.putExtra("isOnlineGame", isOnlineGame);
 
         if (isOnlineGame) {
+            gameFound=false;
             findGame(mode, (int) time, (int) plusTime, userId, () -> {
                 intent.putExtra("isWhite", isWhite);
                 intent.putExtra("gameId", gameId);
                 intent.putExtra("userId", userId);
-                startActivity(intent);
-                finish();
+                if(gameFound){
+                    startActivity(intent);
+                    finish();
+                }else{
+                    View dialogView = getLayoutInflater().inflate(R.layout.dialog_searching, null);
+                    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                    builder.setView(dialogView);
+                    builder.setCancelable(false);
+
+                    AlertDialog searchingDialog = builder.create();
+
+                    Button cancelButton = dialogView.findViewById(R.id.cancel_button);
+                    cancelButton.setOnClickListener(v -> {
+                        FirebaseDatabase.getInstance().getReference("games").child(gameId).removeValue();
+                        searchingDialog.dismiss();
+                    });
+
+                    searchingDialog.show();
+
+                    DatabaseReference playersRef = FirebaseDatabase.getInstance().getReference("games").child(gameId).child("players");
+
+                    playersRef.addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot snapshot) {
+                            String white = snapshot.child("whitePlayer").getValue(String.class);
+                            String black = snapshot.child("blackPlayer").getValue(String.class);
+
+                            if (white != null && !white.isEmpty() && black != null && !black.isEmpty()) {
+                                searchingDialog.dismiss();
+                                startActivity(intent);
+                                finish();
+
+                                playersRef.removeEventListener(this);
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError error) {
+                            Log.e("Firebase", "Ошибка ожидания второго игрока", error.toException());
+                        }
+                    });
+
+                }
             });
         } else {
             intent.putExtra("gameId", gameId);
@@ -174,7 +218,7 @@ public class ChessGameSettings extends AppCompatActivity {
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-                        boolean gameFound = false;
+                        gameFound = false;
 
                         for (DataSnapshot gameSnapshot : snapshot.getChildren()) {
                             gameId = gameSnapshot.getKey();

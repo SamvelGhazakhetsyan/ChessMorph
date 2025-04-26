@@ -41,7 +41,7 @@ public class Board extends AppCompatActivity {
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
     private int selectedRow = -1, selectedCol = -1, circle=R.drawable.gray_circle, krug=R.drawable.gray_krug_24;
-    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isCheck = false, morphModeOn=true, turnTheBoardOn=true, canMove = false, isOnlineGame, isWhite=true;
+    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isMate = false, isgameend=false, isCheck=false, morphModeOn=true, turnTheBoardOn=true, canMove = false, isOnlineGame, isWhite=true;
     private Piece BlackKing = new King(0, 4, false);
     private Piece WhiteKing = new King(7, 4, true);
     private Piece checker=null;
@@ -232,6 +232,7 @@ public class Board extends AppCompatActivity {
                 boardSetup[row][col] = boardSetup[selectedRow][selectedCol];
                 boardSetup[selectedRow][selectedCol] = null;
 
+                //check if king is in check
                 if (isKingInCheck(isWhiteTurn,true)){
                     boardSetup[row][col].setY(selectedCol);
                     boardSetup[row][col].setX(selectedRow);
@@ -243,13 +244,15 @@ public class Board extends AppCompatActivity {
                     if (boardSetup[row][col] instanceof Pawn) {
                         if ((boardSetup[row][col].isWhite && row == 0) || (!boardSetup[row][col].isWhite && row == 7)) {
                             promotePawn(row, col, boardSetup[row][col].isWhite);
-
                         }
                     }
 
                     cell.setImageDrawable(selectedPiece.getDrawable());
                     selectedPiece.setImageDrawable(null);
 
+                    if (boardSetup[row][col] instanceof King || boardSetup[row][col] instanceof Rook){
+                        boardSetup[row][col].hasMoved=true;
+                    }
 
                     //chessMorph part
                     if(morphModeOn){
@@ -280,7 +283,7 @@ public class Board extends AppCompatActivity {
 
                     if(isKingInCheck(isWhiteTurn,true)){
                         if(isCheckmate(isWhiteTurn)){
-                            System.out.println("CHECKMATE");
+                            isMate=true;
                             if(isWhiteTurn){
                                 theEndgame("Black wins",false);
                             }else{
@@ -372,10 +375,6 @@ public class Board extends AppCompatActivity {
 
     }
 
-    public void backToMenu(View view) {
-        startActivity(new Intent(getApplicationContext(),MainActivity.class));
-        finish();
-    }
 
 
 
@@ -563,7 +562,7 @@ public class Board extends AppCompatActivity {
 
     abstract class Piece {
         protected int x, y, pic;
-        protected boolean isWhite, isMorphable;
+        protected boolean isWhite, isMorphable, hasMoved=false;
 
         public void setX(int x) {
             this.x = x;
@@ -586,6 +585,7 @@ public class Board extends AppCompatActivity {
                 pic=R.drawable.rook_white;
             }else pic=R.drawable.rook_black;
             isMorphable=true;
+            hasMoved=false;
         }
 
         @Override
@@ -705,6 +705,7 @@ public class Board extends AppCompatActivity {
                 pic=R.drawable.king_white;
             }else pic=R.drawable.king_black;
             isMorphable=false;
+            hasMoved=false;
         }
 
         @Override
@@ -994,10 +995,55 @@ public class Board extends AppCompatActivity {
 
 
 
+
+    public void backToMenu(View view) {
+        if (isgameend){
+            startActivity(new Intent(getApplicationContext(),MainActivity.class));
+            finish();
+        }else{
+            AlertDialog.Builder suerToLeave = new AlertDialog.Builder(this);
+            suerToLeave.setTitle("Are you sure?");
+
+            suerToLeave.setPositiveButton("OK", (dialog, which) -> {
+                if(isOnlineGame){
+                    if (isWhite){
+                        theEndgame("White left the game",false);
+                    }else{
+                        theEndgame("Black left the game",false);
+                    }//НУЖНО СООБЩИТЬ БАЗЕ О ВЫХОДЕ ИЗ ИГРЫ
+                }else{
+
+                    if (whiteTimer != null) {
+                        whiteTimer.cancel();
+                    }
+                    if (blackTimer != null) {
+                        blackTimer.cancel();
+                    }
+
+                    startActivity(new Intent(getApplicationContext(),MainActivity.class));
+                    finish();
+                }
+            });
+            suerToLeave.setNegativeButton("CANCEL", (dialog, which) -> {
+                return;
+            });
+
+            AlertDialog dialog = suerToLeave.create();
+            dialog.show();
+        }
+    }
     public void theEndgame(String text, boolean withTime){
+        isgameend=true;
         if(!withTime){
-            whiteTimer.cancel();
-            blackTimer.cancel();
+            if (whiteTimer != null) {
+                whiteTimer.cancel();
+            }
+            if (blackTimer != null) {
+                blackTimer.cancel();
+            }
+        }
+        if(isOnlineGame){
+            FirebaseDatabase.getInstance().getReference("games").child(gameId).removeValue();
         }
         AlertDialog.Builder endGame = new AlertDialog.Builder(this);
         endGame.setTitle(text);

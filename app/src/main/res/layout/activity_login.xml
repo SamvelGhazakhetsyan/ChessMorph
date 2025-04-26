@@ -33,13 +33,13 @@
         android:hint="Email"
         android:inputType="text"
         android:textColor="#FFFFFF"
+        android:textColorHint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView_L"
-        app:layout_constraintVertical_bias="0.22000003"
-        android:textColorHint="@color/white"/>
+        app:layout_constraintVertical_bias="0.22000003" />
 
     <EditText
         android:id="@+id/password_L"
@@ -51,14 +51,15 @@
         android:ems="10"
         android:hint="Password"
         android:inputType="text"
+        android:password="true"
         android:textColor="#FFFFFF"
+        android:textColorHint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/Email_L"
-        app:layout_constraintVertical_bias="0.0"
-        android:textColorHint="@color/white" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <Button
         android:id="@+id/logBtn"
@@ -67,10 +68,11 @@
         android:layout_marginStart="17dp"
         android:layout_marginTop="28dp"
         android:layout_marginEnd="17dp"
-        android:background="#FAF8F8"
+        android:backgroundTint="#3D9039"
         android:ems="10"
         android:text="Login"
         android:textSize="20sp"
+        android:textColor="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
