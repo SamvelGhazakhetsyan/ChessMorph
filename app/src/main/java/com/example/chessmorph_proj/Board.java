@@ -1,33 +1,44 @@
 package com.example.chessmorph_proj;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -52,9 +63,12 @@ public class Board extends AppCompatActivity {
 
     private TextView whiteTimerText, blackTimerText;
     private CountDownTimer whiteTimer, blackTimer;
-    private long whiteTimeLeft = 300000, blackTimeLeft = 300000, plusTime=0; // 5
-    private String gameId, userId, onlineTurn, opponentId;
+    private long whiteTimeLeft = 300000, blackTimeLeft = 300000, plusTime=0, lastBackPressedTime = 0; // 5
+    private static final int BACK_PRESS_DELAY = 1500;
+    private String gameId, userId, onlineTurn, opponentId, opponentNickname;
     DatabaseReference gameRef;
+    FirebaseAuth fAuth;
+    SharedPreferences prefs;
 
 
 
@@ -65,6 +79,15 @@ public class Board extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //ориентация вертикальная
         setContentView(R.layout.activity_board);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window window = getWindow();
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.setStatusBarColor(Color.parseColor("#55000000")); // Темный цвет для статус-бара
+        }
+
+        fAuth = FirebaseAuth.getInstance();
+        prefs = getSharedPreferences(fAuth.getCurrentUser().getUid(), MODE_PRIVATE);
 
         isOnlineGame = getIntent().getBooleanExtra("isOnlineGame", false);
         whiteTimeLeft= getIntent().getLongExtra("time", 300000);
@@ -78,20 +101,83 @@ public class Board extends AppCompatActivity {
         /*gameRef.child("turn").get().addOnSuccessListener(snapshot -> {
             onlineTurn = snapshot.getValue(String.class);
         });*/
+
+        whiteTimerText = findViewById(R.id.whiteTimer);
+        blackTimerText = findViewById(R.id.blackTimer);
+        updateTimerUI();
         if(isOnlineGame){
+
+            int games = prefs.getInt("games",0)+1;
+            prefs.edit().putInt("games",games).apply();
+
             gameRef = FirebaseDatabase.getInstance().getReference("games").child(gameId);
+            DatabaseReference playersRef = gameRef.child("players");
+
             listenForMoves();
+
+            if (isWhite) {
+                startWhiteTimer();
+            } else {
+                startBlackTimer();
+            }
+
+            //opponents information
+            playersRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+                    opponentId = snapshot.child(isWhite ? "blackPlayer" : "whitePlayer").getValue(String.class);
+
+
+                    DatabaseReference opponentRef = FirebaseDatabase.getInstance().getReference("users").child(opponentId);
+                    opponentRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            String opponentNickname = snapshot.child("nickname").getValue(String.class);
+                            TextView nickText = findViewById(R.id.opponentNick);
+                            nickText.setText(opponentNickname); // показываем ник оппонента
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users").child(userId);
+            ref.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    Integer games = snapshot.child("games").getValue(Integer.class);
+                    if (games != null) {
+                        int gamesCount = games + 1;
+                        ref.child("games").setValue(gamesCount);
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            TextView myNickText = findViewById(R.id.myNick);
+            myNickText.setText(prefs.getString("nickname", ""));
+        }else{
+            startWhiteTimer();
         }
 
         chessBoard = findViewById(R.id.chessBoard);
 
         setupBoard();
 
-        whiteTimerText = findViewById(R.id.whiteTimer);
-        blackTimerText = findViewById(R.id.blackTimer);
-
-        updateTimerUI();
-        startWhiteTimer();
     }
 
     private void setupBoard() {
@@ -124,7 +210,7 @@ public class Board extends AppCompatActivity {
         for (int i = 0; i < 8; i++) {
             boardSetup[6][i] = new Pawn(6, i, true);
         }
-
+        
 
 
         // Создаём клетки и добавляем фигуры
@@ -162,6 +248,9 @@ public class Board extends AppCompatActivity {
                     cell.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                     cell.setPadding(8, 8, 8, 8);
                 }
+                cell.setAdjustViewBounds(true);
+                cell.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                cell.setPadding(8, 8, 8, 8);
                 cells[row][col] = cell;
 
                 // Добавляем в GridLayout
@@ -263,20 +352,44 @@ public class Board extends AppCompatActivity {
 
 
 
-                    if (isWhiteTurn) {
-                        startBlackTimer();
-                        whiteTimeLeft+=plusTime;
-                        whiteTimer.cancel();
-                    } else {
-                        startWhiteTimer();
-                        blackTimeLeft+=plusTime;
-                        blackTimer.cancel();
-                    }
-
 
                     if(isOnlineGame){
                         sendMove(gameId,selectedRow, selectedCol, row, col);
+
+
+                        if (isWhite){
+                            if (isWhiteTurn) {
+                                startBlackTimer();
+                                whiteTimeLeft+=plusTime;
+                                whiteTimer.cancel();
+                            } else {
+                                startWhiteTimer();
+                                blackTimeLeft+=plusTime;
+                                blackTimer.cancel();
+                            }
+                        }else{
+                            if (isWhiteTurn) {
+                                startWhiteTimer();
+                                blackTimeLeft+=plusTime;
+                                blackTimer.cancel();
+                            } else {
+                                startBlackTimer();
+                                whiteTimeLeft+=plusTime;
+                                whiteTimer.cancel();
+                            }
+                        }
+                    }else{
+                        if (isWhiteTurn) {
+                            startBlackTimer();
+                            whiteTimeLeft+=plusTime;
+                            whiteTimer.cancel();
+                        } else {
+                            startWhiteTimer();
+                            blackTimeLeft+=plusTime;
+                            blackTimer.cancel();
+                        }
                     }
+                    System.out.println("ALOXAMORA");
 
                     isWhiteTurn = !isWhiteTurn;
 
@@ -285,9 +398,9 @@ public class Board extends AppCompatActivity {
                         if(isCheckmate(isWhiteTurn)){
                             isMate=true;
                             if(isWhiteTurn){
-                                theEndgame("Black wins",false);
+                                theEndgame("Black wins",false, "black");
                             }else{
-                                theEndgame("White wins",false);
+                                theEndgame("White wins",false, "white");
                             }
                         }
                     }
@@ -356,8 +469,8 @@ public class Board extends AppCompatActivity {
                     cells[move[0]][move[1]].setImageDrawable(getResources().getDrawable(boardSetup[move[0]][move[1]].pic));
                     cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                 }else {
-                cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-                cells[move[0]][move[1]].setImageDrawable(null);
+                    cells[move[0]][move[1]].setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                    cells[move[0]][move[1]].setImageDrawable(null);
                 }
             }
             validMovesForDraw=null;
@@ -765,14 +878,26 @@ public class Board extends AppCompatActivity {
 
 
 
-            if (!isWhiteTurn) {
-                startBlackTimer();
-                whiteTimeLeft+=plusTime;
-                whiteTimer.cancel();
-            } else {
-                startWhiteTimer();
-                blackTimeLeft+=plusTime;
-                blackTimer.cancel();
+            if (isWhite){
+                if (!isWhiteTurn) {
+                    startBlackTimer();
+                    whiteTimeLeft+=plusTime;
+                    whiteTimer.cancel();
+                } else {
+                    startWhiteTimer();
+                    blackTimeLeft+=plusTime;
+                    blackTimer.cancel();
+                }
+            }else{
+                if (!isWhiteTurn) {
+                    startWhiteTimer();
+                    blackTimeLeft+=plusTime;
+                    blackTimer.cancel();
+                } else {
+                    startBlackTimer();
+                    whiteTimeLeft+=plusTime;
+                    whiteTimer.cancel();
+                }
             }
 
 
@@ -781,9 +906,9 @@ public class Board extends AppCompatActivity {
                 if(isCheckmate(isWhiteTurn)){
                     System.out.println("CHECKMATE");
                     if(isWhiteTurn){
-                        theEndgame("Black wins",false);
+                        theEndgame("Black wins",false, "black");
                     }else{
-                        theEndgame("White wins",false);
+                        theEndgame("White wins",false, "white");
                     }
                 }
             }
@@ -829,7 +954,11 @@ public class Board extends AppCompatActivity {
             }
 
             public void onFinish() {
-                theEndgame("Black wins by time",true);
+                if(isWhite){
+                    theEndgame("Black wins by time",true, "black");
+                }else{
+                    theEndgame("White wins by time",true, "white");
+                }
             }
         }.start();
     }
@@ -842,7 +971,11 @@ public class Board extends AppCompatActivity {
             }
 
             public void onFinish() {
-                theEndgame("White wins by time",true);
+                if(isWhite){
+                    theEndgame("White wins by time",true, "white");
+                }else{
+                    theEndgame("Black wins by time",true, "black");
+                }
             }
         }.start();
     }
@@ -994,7 +1127,18 @@ public class Board extends AppCompatActivity {
 
 
 
+    public void toMyProfile(View view){
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.putExtra("isMyProfile", true);
+        startActivity(intent);
+    }
 
+    public void toOpponentProfile(View view){
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.putExtra("isMyProfile", false);
+        intent.putExtra("opponentId", opponentId);
+        startActivity(intent);
+    }
 
     public void backToMenu(View view) {
         if (isgameend){
@@ -1007,9 +1151,9 @@ public class Board extends AppCompatActivity {
             suerToLeave.setPositiveButton("OK", (dialog, which) -> {
                 if(isOnlineGame){
                     if (isWhite){
-                        theEndgame("White left the game",false);
+                        theEndgame("White left the game",false, "black");
                     }else{
-                        theEndgame("Black left the game",false);
+                        theEndgame("Black left the game",false, "white");
                     }//НУЖНО СООБЩИТЬ БАЗЕ О ВЫХОДЕ ИЗ ИГРЫ
                 }else{
 
@@ -1032,7 +1176,7 @@ public class Board extends AppCompatActivity {
             dialog.show();
         }
     }
-    public void theEndgame(String text, boolean withTime){
+    public void theEndgame(String text, boolean withTime,String whoWon){
         isgameend=true;
         if(!withTime){
             if (whiteTimer != null) {
@@ -1043,6 +1187,73 @@ public class Board extends AppCompatActivity {
             }
         }
         if(isOnlineGame){
+            if ((whoWon=="white" && isWhite) ||(whoWon=="black" && !isWhite)){
+
+                int wins = prefs.getInt("wins",0)+1;
+                prefs.edit().putInt("wins",wins).apply();
+
+                DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users").child(userId);
+                ref.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        Integer wins = snapshot.child("wins").getValue(Integer.class);
+                        if (wins != null) {
+                            int winsCount = wins + 1;
+                            ref.child("wins").setValue(winsCount);
+                        }
+                        if(morphModeOn){
+
+                            Integer chessMorphRating = snapshot.child("chessRating").getValue(Integer.class);
+                            if (chessMorphRating != null) {
+                                int chessMorphRat = chessMorphRating + 5;
+                                ref.child("chessMorphRating").setValue(chessMorphRat);
+                                prefs.edit().putInt("chessMorphRating",chessMorphRat).apply();
+                            }
+
+
+                        }else{
+                            Integer chessRating = snapshot.child("chessRating").getValue(Integer.class);
+                            if (chessRating != null) {
+                                int chessRat = chessRating + 5;
+                                ref.child("chessRating").setValue(chessRat);
+                                prefs.edit().putInt("chessRating",chessRat).apply();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }else{
+
+                DatabaseReference ref = FirebaseDatabase.getInstance().getReference("users").child(userId);
+                ref.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if(morphModeOn){
+                            Integer chessMorphRating = snapshot.child("chessRating").getValue(Integer.class);
+                            if (chessMorphRating != null) {
+                                int chessMorphRat = chessMorphRating - 5;
+                                ref.child("chessMorphRating").setValue(chessMorphRat);
+                                prefs.edit().putInt("chessMorphRating",chessMorphRat).apply();
+                            }
+                        }else{
+                            Integer chessRating = snapshot.child("chessRating").getValue(Integer.class);
+                            if (chessRating != null) {
+                                int chessRat = chessRating - 5;
+                                ref.child("chessRating").setValue(chessRat);
+                                prefs.edit().putInt("chessRating",chessRat).apply();
+                            }
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
             FirebaseDatabase.getInstance().getReference("games").child(gameId).removeValue();
         }
         AlertDialog.Builder endGame = new AlertDialog.Builder(this);
@@ -1061,5 +1272,17 @@ public class Board extends AppCompatActivity {
         dialog.show();
     }
 
+    @Override
+    public void onBackPressed() {
+        long currentTime = System.currentTimeMillis();
+
+        if (currentTime - lastBackPressedTime < BACK_PRESS_DELAY) {
+
+            backToMenu(null);
+        } else {
+            lastBackPressedTime = currentTime;
+            Toast.makeText(this, "Press again to leave", Toast.LENGTH_SHORT).show();
+        }
+    }
 
 }

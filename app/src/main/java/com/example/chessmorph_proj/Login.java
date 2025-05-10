@@ -1,8 +1,11 @@
 package com.example.chessmorph_proj;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -73,6 +76,10 @@ public class Login extends AppCompatActivity {
                 String email=mEmail.getText().toString().trim();
                 String password=mPassword.getText().toString().trim();
 
+                if (!isInternetAvailable()) {
+                    Toast.makeText(Login.this, "No internet connection", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (TextUtils.isEmpty(email)){
                     mEmail.setError("Email is Required");
                     return;
@@ -88,6 +95,7 @@ public class Login extends AppCompatActivity {
                         if(task.isSuccessful()){
                             Toast.makeText(Login.this,"Logged in successfully",Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(getApplicationContext(),MainActivity.class));
+                            finish();
                         }else {
                             Toast.makeText(Login.this,"Error!"+task.getException().getMessage(),Toast.LENGTH_SHORT).show();
                         }
@@ -140,5 +148,15 @@ public class Login extends AppCompatActivity {
                 passwordResetDialog.create().show();
             }
         });
+    }
+    public boolean isInternetAvailable() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return capabilities != null &&
+                    (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                            || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
+        }
+        return false;
     }
 }

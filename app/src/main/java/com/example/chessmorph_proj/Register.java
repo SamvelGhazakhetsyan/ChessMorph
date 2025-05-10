@@ -1,9 +1,13 @@
 package com.example.chessmorph_proj;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -27,6 +31,12 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Register extends AppCompatActivity {
     EditText mUserName,mEmail,mPassword,mPassword2;
@@ -63,6 +73,10 @@ public class Register extends AppCompatActivity {
                 String password=mPassword.getText().toString().trim();
                 String password2=mPassword2.getText().toString().trim();
 
+                if (!isInternetAvailable()) {
+                    Toast.makeText(Register.this, "No internet connection", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (TextUtils.isEmpty(userName)){
                     mUserName.setError("Username is Required");
                     return;
@@ -138,7 +152,35 @@ public class Register extends AppCompatActivity {
                     user.reload().addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
                             if (user.isEmailVerified()) {
+                                FirebaseUser user1 = FirebaseAuth.getInstance().getCurrentUser();
+                                DatabaseReference database = FirebaseDatabase.getInstance().getReference("users");
+                                String uid = user.getUid();
+
+                                Map<String, Object> profile = new HashMap<>();
+                                profile.put("userId", fAuth.getCurrentUser().getUid());
+                                profile.put("nickname", userName);
+                                profile.put("name", "");
+                                profile.put("surname", "");
+                                profile.put("avatar", "");
+                                profile.put("registrationDate", ServerValue.TIMESTAMP);
+                                profile.put("chessRating", 1000);
+                                profile.put("chessMorphRating", 1000);
+                                profile.put("games", 0);
+                                profile.put("wins", 0);
+                                database.child(uid).setValue(profile);
+
+                                SharedPreferences prefs = getSharedPreferences(fAuth.getCurrentUser().getUid(), MODE_PRIVATE);
+                                prefs.edit().putString("nickname", userName).apply();
+                                prefs.edit().putString("name", "").apply();
+                                prefs.edit().putString("surname", "").apply();
+                                prefs.edit().putInt("chessRating", 1000).apply();
+                                prefs.edit().putInt("chessMorphRating", 1000).apply();
+                                prefs.edit().putInt("games", 0).apply();
+                                prefs.edit().putInt("wins", 0).apply();
+
+
                                 startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                                finish();
                                 Toast.makeText(Register.this, "Logged in successfully", Toast.LENGTH_SHORT).show();
                             } else {
                                 Toast.makeText(Register.this, "Please verify your email", Toast.LENGTH_SHORT).show();
@@ -173,6 +215,17 @@ public class Register extends AppCompatActivity {
                 startActivity(new Intent(getApplicationContext(),Login.class));
             }
         });
+    }
+
+    public boolean isInternetAvailable() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            NetworkCapabilities capabilities = cm.getNetworkCapabilities(cm.getActiveNetwork());
+            return capabilities != null &&
+                    (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                            || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
+        }
+        return false;
     }
 }
 
