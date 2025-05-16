@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -69,6 +70,8 @@ public class Board extends AppCompatActivity {
     DatabaseReference gameRef;
     FirebaseAuth fAuth;
     SharedPreferences prefs;
+    ImageButton blackImage;
+    ImageButton whiteImage;
 
 
 
@@ -83,8 +86,23 @@ public class Board extends AppCompatActivity {
             Window window = getWindow();
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-            window.setStatusBarColor(Color.parseColor("#55000000")); // Темный цвет для статус-бара
+
+
+            window.setStatusBarColor(Color.parseColor("#55000000"));
+
+
+            window.setNavigationBarColor(Color.TRANSPARENT);
+
+
+            window.getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            );
         }
+        blackImage = findViewById(R.id.blackImage);
+        whiteImage = findViewById(R.id.whiteImage);
+
 
         fAuth = FirebaseAuth.getInstance();
         prefs = getSharedPreferences(fAuth.getCurrentUser().getUid(), MODE_PRIVATE);
@@ -107,9 +125,6 @@ public class Board extends AppCompatActivity {
         updateTimerUI();
         if(isOnlineGame){
 
-            int games = prefs.getInt("games",0)+1;
-            prefs.edit().putInt("games",games).apply();
-
             gameRef = FirebaseDatabase.getInstance().getReference("games").child(gameId);
             DatabaseReference playersRef = gameRef.child("players");
 
@@ -119,6 +134,15 @@ public class Board extends AppCompatActivity {
                 startWhiteTimer();
             } else {
                 startBlackTimer();
+            }
+            String imageUri = prefs.getString("image", "");
+
+            if(imageUri != "") {
+                ImageView avatarImageView = findViewById(R.id.whiteImage);
+                Glide.with(Board.this)
+                        .load(imageUri)
+                        .placeholder(R.drawable.profile_images)
+                        .into(avatarImageView);
             }
 
             //opponents information
@@ -134,8 +158,16 @@ public class Board extends AppCompatActivity {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot snapshot) {
                             String opponentNickname = snapshot.child("nickname").getValue(String.class);
+                            String opponentAvatar = snapshot.child("avatarUrl").getValue(String.class);
                             TextView nickText = findViewById(R.id.opponentNick);
-                            nickText.setText(opponentNickname); // показываем ник оппонента
+                            nickText.setText(opponentNickname);
+                            if(opponentAvatar!=null) {
+                                ImageView avatarImageView = findViewById(R.id.blackImage);
+                                Glide.with(Board.this)
+                                        .load(opponentAvatar)
+                                        .placeholder(R.drawable.profile_images)
+                                        .into(avatarImageView);
+                            }
                         }
 
                         @Override
@@ -159,6 +191,7 @@ public class Board extends AppCompatActivity {
                     if (games != null) {
                         int gamesCount = games + 1;
                         ref.child("games").setValue(gamesCount);
+                        prefs.edit().putInt("games",gamesCount).apply();
                     }
                 }
 
@@ -172,6 +205,15 @@ public class Board extends AppCompatActivity {
             myNickText.setText(prefs.getString("nickname", ""));
         }else{
             startWhiteTimer();
+            blackImage.setVisibility(View.GONE);
+            whiteImage.setVisibility(View.GONE);
+        }
+        if(morphModeOn){
+            TextView textView = findViewById(R.id.textView2);
+            textView.setText("Morph mode");
+        }else{
+            TextView textView = findViewById(R.id.textView2);
+            textView.setText("Classic");
         }
 
         chessBoard = findViewById(R.id.chessBoard);
@@ -225,7 +267,7 @@ public class Board extends AppCompatActivity {
                 cell.setLayoutParams(params);
 
                 // Задаём цвет клетки
-                cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
+                cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
 
                 // Если в клетке есть фигура, устанавливаем изображение
 
@@ -458,7 +500,7 @@ public class Board extends AppCompatActivity {
                 System.out.println(selectedRow+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+selectedCol);
             }
 
-            selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
+            selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
             selectedPiece = null;
             isWhiteCheck = isKingInCheck(true,true);
             isBlackCheck = isKingInCheck(false,true);
@@ -477,7 +519,7 @@ public class Board extends AppCompatActivity {
 
         }
         System.out.println("White: "+isWhiteCheck+"   Black: "+isBlackCheck);
-        if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));}
+        if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));}
         if(isKingInCheck(isWhiteTurn,false)){
             if (boardSetup[selectedRow][selectedCol] instanceof King) {
                 if (selectedRow==row && selectedCol==col&&!hell){
@@ -614,7 +656,7 @@ public class Board extends AppCompatActivity {
             if (isCheck) {
                 cells[kingPos[0]][kingPos[1]].setBackgroundColor(getResources().getColor(R.color.red));
             } else {
-                cells[kingPos[0]][kingPos[1]].setBackgroundColor((kingPos[0] + kingPos[1]) % 2 == 0 ? getResources().getColor(R.color.white) : getResources().getColor(R.color.green));
+                cells[kingPos[0]][kingPos[1]].setBackgroundColor((kingPos[0] + kingPos[1]) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
             }
         }
         return isCheck;
@@ -1187,7 +1229,7 @@ public class Board extends AppCompatActivity {
             }
         }
         if(isOnlineGame){
-            if ((whoWon=="white" && isWhite) ||(whoWon=="black" && !isWhite)){
+            if ((whoWon.equals("white") && isWhite) ||(whoWon.equals("black") && !isWhite)){
 
                 int wins = prefs.getInt("wins",0)+1;
                 prefs.edit().putInt("wins",wins).apply();

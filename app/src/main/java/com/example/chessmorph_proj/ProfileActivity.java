@@ -9,16 +9,21 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -53,15 +58,16 @@ public class ProfileActivity extends AppCompatActivity {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             window.setStatusBarColor(Color.parseColor("#55000000")); // Темный цвет для статус-бара
         }
-
-
         isMyProfile = getIntent().getBooleanExtra("isMyProfile", true);
+
+
+
+
         fAuth = FirebaseAuth.getInstance();
 
         prefs = getSharedPreferences(fAuth.getCurrentUser().getUid(), MODE_PRIVATE);
 
 
-        System.out.println("WHYYYYYYY");
 
 
 
@@ -102,10 +108,88 @@ public class ProfileActivity extends AppCompatActivity {
                 winRateInt.setText(""+winRate+"%");
             }
 
+            String imageUri = prefs.getString("image", "");
+            if(imageUri != "") {
+                ImageView avatarImageView = findViewById(R.id.imageView);
+                Glide.with(ProfileActivity.this)
+                        .load(imageUri)
+                        .placeholder(R.drawable.profile_images)
+                        .into(avatarImageView);
+            }
+
         } else {
-            //get user Id from intent
             userId = getIntent().getStringExtra("opponentId");
         }
+
+        ImageButton menuButton = findViewById(R.id.menuButton);
+        if(isMyProfile) {
+            menuButton.setOnClickListener(v -> {
+                PopupMenu popupMenu = new PopupMenu(ProfileActivity.this, v);
+                popupMenu.getMenuInflater().inflate(R.menu.profile_menu, popupMenu.getMenu());
+
+                popupMenu.setOnMenuItemClickListener(item -> {
+                    int id = item.getItemId();
+                    if (id == R.id.edit_profile) {
+                        // Переход на EditProfileActivity
+                        Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                        startActivity(intent);
+                        finish();
+                        return true;
+                    } else if (id == R.id.logout) {
+                        AlertDialog.Builder suerToLeave = new AlertDialog.Builder(this);
+                        suerToLeave.setTitle("Are you sure?");
+
+                        suerToLeave.setPositiveButton("OK", (dialog, which) -> {
+                            FirebaseAuth.getInstance().signOut();
+                            startActivity(new Intent(ProfileActivity.this, Register.class));
+                            finish();
+                        });
+                        suerToLeave.setNegativeButton("CANCEL", (dialog, which) -> {
+                            return;
+                        });
+
+                        AlertDialog dialog = suerToLeave.create();
+                        dialog.show();
+                        return true;
+                    }
+                    return false;
+                });
+
+                popupMenu.show();
+            });
+        }else{
+            menuButton.setOnClickListener(v -> {
+                PopupMenu popupMenu = new PopupMenu(ProfileActivity.this, v);
+                popupMenu.getMenuInflater().inflate(R.menu.profile_menu_other, popupMenu.getMenu());
+
+                popupMenu.setOnMenuItemClickListener(item -> {
+                    int id = item.getItemId();
+                    if (id == R.id.report) {
+                        DatabaseReference reportRef = FirebaseDatabase.getInstance()
+                                .getReference("reports")
+                                .child(userId); // на кого жалуются
+
+                        String myId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                        reportRef.child(myId).setValue(true)
+                                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Reported", Toast.LENGTH_SHORT).show())
+                                .addOnFailureListener(e -> Toast.makeText(this, "Failed to report", Toast.LENGTH_SHORT).show());
+                        return true;
+                    } else if (id == R.id.add_friend) {
+                        // Пример: добавить в друзья
+                        Toast.makeText(this, "Friend request sent", Toast.LENGTH_SHORT).show();
+                        // Здесь можно добавить реализацию отправки заявки в друзья
+                        return true;// DOOOOOOOOOOOOOOOOOOOOOOOO ITTTTTTTTTTTTTTTTTTTTT
+                    }
+                    return false;
+                });
+
+                popupMenu.show();
+            });
+        }
+
+
+
+
         ref = FirebaseDatabase.getInstance().getReference("users").child(userId);
 
         ref.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -126,6 +210,8 @@ public class ProfileActivity extends AppCompatActivity {
                 chessRating = snapshot.child("chessRating").getValue(Integer.class);
 
                 chessMorphRating = snapshot.child("chessMorphRating").getValue(Integer.class);
+
+                String imageUri = snapshot.child("avatarUrl").getValue(String.class);
 
                 if (nickname != null) {
                     TextView nickText = findViewById(R.id.nickText);
@@ -148,7 +234,7 @@ public class ProfileActivity extends AppCompatActivity {
                 }
 
                 if (wins != null) {
-                    TextView gamesInt = findViewById(R.id.gamesInt);
+                    TextView gamesInt = findViewById(R.id.winsInt);
                     gamesInt.setText(""+wins);
                 }
 
@@ -170,6 +256,14 @@ public class ProfileActivity extends AppCompatActivity {
                     int winRate = (wins * 100) / games;
                     TextView winRateInt = findViewById(R.id.winRateInt);
                     winRateInt.setText(""+winRate+"%");
+                }
+
+                if(imageUri!=null){
+                    ImageView avatarImageView = findViewById(R.id.imageView);
+                    Glide.with(ProfileActivity.this)
+                            .load(imageUri)
+                            .placeholder(R.drawable.profile_images)
+                            .into(avatarImageView);
                 }
 
 
@@ -199,6 +293,8 @@ public class ProfileActivity extends AppCompatActivity {
     public void backToMenu(View view) {
         finish();
     }
+
+
     public void edit_info(View view) {
         if(isMyProfile) {
             startActivity(new Intent(this, EditProfileActivity.class));

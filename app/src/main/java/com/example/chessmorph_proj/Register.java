@@ -177,6 +177,7 @@ public class Register extends AppCompatActivity {
                                 prefs.edit().putInt("chessMorphRating", 1000).apply();
                                 prefs.edit().putInt("games", 0).apply();
                                 prefs.edit().putInt("wins", 0).apply();
+                                prefs.edit().putString("image", "").apply();
 
 
                                 startActivity(new Intent(getApplicationContext(), MainActivity.class));

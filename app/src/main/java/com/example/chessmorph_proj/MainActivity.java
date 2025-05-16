@@ -2,6 +2,7 @@ package com.example.chessmorph_proj;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
@@ -12,6 +13,7 @@ import android.view.View;
 import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -20,6 +22,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
@@ -29,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseReference database;
     private long lastBackPressedTime = 0;
     private static final int BACK_PRESS_DELAY = 1500;
+    SharedPreferences prefs;
+    FirebaseAuth fAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +48,20 @@ public class MainActivity extends AppCompatActivity {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             window.setStatusBarColor(Color.parseColor("#55000000")); // Темный цвет для статус-бара
         }
+
+        fAuth = FirebaseAuth.getInstance();
+        prefs = getSharedPreferences(fAuth.getCurrentUser().getUid(), MODE_PRIVATE);
+        String imageUri = prefs.getString("image", "");
+        if(imageUri != "") {
+            ImageView avatarImageView = findViewById(R.id.imageButton2);
+            Glide.with(MainActivity.this)
+                    .load(imageUri)
+                    .placeholder(R.drawable.profile_images)
+                    .into(avatarImageView);
+        }
+
+
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());

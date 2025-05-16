@@ -5,8 +5,30 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1B1B1B"
+    android:background="@drawable/mainbackg"
+    android:fitsSystemWindows="true"
     tools:context=".Board">
+
+    <View
+        android:id="@+id/view"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="#55000000"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ChessMorph"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="@+id/view"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 
     <!-- Шахматная доска -->
     <GridLayout
@@ -69,7 +91,7 @@
 
     <ImageButton
         android:id="@+id/blackImage"
-        android:layout_width="39dp"
+        android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:scaleType="fitCenter"
@@ -85,7 +107,7 @@
 
     <ImageButton
         android:id="@+id/whiteImage"
-        android:layout_width="39dp"
+        android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="@android:color/transparent"
         android:scaleType="fitCenter"
