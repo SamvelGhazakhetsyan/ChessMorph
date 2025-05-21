@@ -53,7 +53,7 @@ public class Board extends AppCompatActivity {
     private GridLayout chessBoard;
     private ImageView selectedPiece = null;
     private int selectedRow = -1, selectedCol = -1, circle=R.drawable.gray_circle, krug=R.drawable.gray_krug_24;
-    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, isMate = false, isgameend=false, isCheck=false, morphModeOn=true, turnTheBoardOn=true, canMove = false, isOnlineGame, isWhite=true;
+    private boolean isWhiteTurn = true, isBlackCheck = false, isWhiteCheck = false, hell=false, promoted=false, isMate = false, isgameend=false, isCheck=false, morphModeOn=true, turnTheBoardOn=true, canMove = false, isOnlineGame, isWhite=true;
     private Piece BlackKing = new King(0, 4, false);
     private Piece WhiteKing = new King(7, 4, true);
     private Piece checker=null;
@@ -314,8 +314,11 @@ public class Board extends AppCompatActivity {
     }
 
     private void onCellClick(int row, int col, ImageView cell) {
+        if(isgameend){
+            return;
+        }
         System.out.println("row: "+row+" col: "+col);
-        boolean hell=false;
+        boolean moved=false;
 
         if (selectedPiece == null) {
             // Выбираем фигуру
@@ -352,11 +355,34 @@ public class Board extends AppCompatActivity {
         } else {
             // Проверяем ход
             if (boardSetup[selectedRow][selectedCol].isValidMove(row, col)) {
+                boolean rok=false;
                 System.out.println("YES");
                 Piece eatenPiece = boardSetup[row][col];
                 System.out.println("ORIG: "+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
 
                 // Перемещаем фигуру
+                if (boardSetup[selectedRow][selectedCol] instanceof King && Math.abs(col - selectedCol) == 2) {
+                    // Рокировка
+                    if (col == 6) {
+                        boardSetup[row][5] = boardSetup[row][7];
+                        boardSetup[row][7] = null;
+                        boardSetup[row][5].x = row;
+                        boardSetup[row][5].y = 5;
+                        boardSetup[row][5].hasMoved=true;
+                        cells[row][5].setImageDrawable(getResources().getDrawable(boardSetup[row][3].pic));
+                        cells[row][7].setImageDrawable(null);
+                        rok=true;
+                    } else if (col == 2) {
+                        boardSetup[row][3] = boardSetup[row][0];
+                        boardSetup[row][0] = null;
+                        boardSetup[row][3].x = row;
+                        boardSetup[row][3].y = 3;
+                        boardSetup[row][3].hasMoved=true;
+                        cells[row][3].setImageDrawable(getResources().getDrawable(boardSetup[row][3].pic));
+                        cells[row][0].setImageDrawable(null);
+                        rok=true;
+                    }
+                }
                 boardSetup[selectedRow][selectedCol].setY(col);
                 boardSetup[selectedRow][selectedCol].setX(row);
 
@@ -364,14 +390,17 @@ public class Board extends AppCompatActivity {
                 boardSetup[selectedRow][selectedCol] = null;
 
                 //check if king is in check
-                if (isKingInCheck(isWhiteTurn,true)){
+                if (isKingInCheck(isWhiteTurn,false)){
                     boardSetup[row][col].setY(selectedCol);
                     boardSetup[row][col].setX(selectedRow);
                     boardSetup[selectedRow][selectedCol]=boardSetup[row][col];
                     boardSetup[row][col]=eatenPiece;
+                    if(hell){
+                        cells[selectedRow][selectedCol].setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
+                    }
                     System.out.println(WhiteKing.x+" "+ WhiteKing.y+":"+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
-                }else{
-
+                }else {
+                    hell=false;
                     if (boardSetup[row][col] instanceof Pawn) {
                         if ((boardSetup[row][col].isWhite && row == 0) || (!boardSetup[row][col].isWhite && row == 7)) {
                             promotePawn(row, col, boardSetup[row][col].isWhite);
@@ -381,53 +410,49 @@ public class Board extends AppCompatActivity {
                     cell.setImageDrawable(selectedPiece.getDrawable());
                     selectedPiece.setImageDrawable(null);
 
-                    if (boardSetup[row][col] instanceof King || boardSetup[row][col] instanceof Rook){
-                        boardSetup[row][col].hasMoved=true;
+                    if (boardSetup[row][col] instanceof King || boardSetup[row][col] instanceof Rook) {
+                        boardSetup[row][col].hasMoved = true;
                     }
 
                     //chessMorph part
-                    if(morphModeOn){
-                        morphMode(row,col,selectedRow,selectedCol,cell);
+                    if (morphModeOn) {
+                        morphMode(row, col, selectedRow, selectedCol, cell);
                     }
 
 
+                    if (isOnlineGame) {
+                        sendMove(gameId, selectedRow, selectedCol, row, col);
 
 
-
-
-                    if(isOnlineGame){
-                        sendMove(gameId,selectedRow, selectedCol, row, col);
-
-
-                        if (isWhite){
+                        if (isWhite) {
                             if (isWhiteTurn) {
                                 startBlackTimer();
-                                whiteTimeLeft+=plusTime;
+                                whiteTimeLeft += plusTime;
                                 whiteTimer.cancel();
                             } else {
                                 startWhiteTimer();
-                                blackTimeLeft+=plusTime;
+                                blackTimeLeft += plusTime;
                                 blackTimer.cancel();
                             }
-                        }else{
+                        } else {
                             if (isWhiteTurn) {
                                 startWhiteTimer();
-                                blackTimeLeft+=plusTime;
+                                blackTimeLeft += plusTime;
                                 blackTimer.cancel();
                             } else {
                                 startBlackTimer();
-                                whiteTimeLeft+=plusTime;
+                                whiteTimeLeft += plusTime;
                                 whiteTimer.cancel();
                             }
                         }
-                    }else{
+                    } else {
                         if (isWhiteTurn) {
                             startBlackTimer();
-                            whiteTimeLeft+=plusTime;
+                            whiteTimeLeft += plusTime;
                             whiteTimer.cancel();
                         } else {
                             startWhiteTimer();
-                            blackTimeLeft+=plusTime;
+                            blackTimeLeft += plusTime;
                             blackTimer.cancel();
                         }
                     }
@@ -436,13 +461,13 @@ public class Board extends AppCompatActivity {
                     isWhiteTurn = !isWhiteTurn;
 
 
-                    if(isKingInCheck(isWhiteTurn,true)){
-                        if(isCheckmate(isWhiteTurn)){
-                            isMate=true;
-                            if(isWhiteTurn){
-                                theEndgame("Black wins",false, "black");
-                            }else{
-                                theEndgame("White wins",false, "white");
+                    if (isKingInCheck(isWhiteTurn, true)) {
+                        if (isCheckmate(isWhiteTurn)) {
+                            isMate = true;
+                            if (isWhiteTurn) {
+                                theEndgame("Black wins", false, "black");
+                            } else {
+                                theEndgame("White wins", false, "white");
                             }
                         }
                     }
@@ -472,7 +497,7 @@ public class Board extends AppCompatActivity {
                     */
 
 
-                    if (turnTheBoardOn&&!isOnlineGame) {
+                    if (turnTheBoardOn && !isOnlineGame) {
                         if (!isWhiteTurn) {
                             for (ImageView[] i : cells) {
                                 for (ImageView j : i) {
@@ -489,18 +514,28 @@ public class Board extends AppCompatActivity {
                     }
 
 
-
-                    System.out.println(boardSetup[row][col].y+"  "+boardSetup[row][col].x);
-                    System.out.println(row+"  "+col);
+                    System.out.println(boardSetup[row][col].y + "  " + boardSetup[row][col].x);
+                    System.out.println(row + "  " + col);
+                    moved=true;
+                    for (int i = 0; i < BOARD_SIZE; i++) {
+                        for (int j = 0; j < BOARD_SIZE; j++) {
+                            cells[i][j].setBackgroundColor((i + j) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
+                        }
+                    }
+                    if (!rok){
+                        cells[selectedRow][selectedCol].setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
+                        cells[row][col].setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
+                    }
                 }
 
-
             }else {
+                if(hell){
+                    cells[selectedRow][selectedCol].setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
+                }
                 System.out.println(boardSetup[selectedRow][selectedCol].y+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+boardSetup[selectedRow][selectedCol].x);
                 System.out.println(selectedRow+"  "+boardSetup[selectedRow][selectedCol].isValidMove(row, col)+"  "+selectedCol);
             }
 
-            selectedPiece.setBackgroundColor((selectedRow + selectedCol) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
             selectedPiece = null;
             isWhiteCheck = isKingInCheck(true,true);
             isBlackCheck = isKingInCheck(false,true);
@@ -519,7 +554,7 @@ public class Board extends AppCompatActivity {
 
         }
         System.out.println("White: "+isWhiteCheck+"   Black: "+isBlackCheck);
-        if(!hell){cell.setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));}
+
         if(isKingInCheck(isWhiteTurn,false)){
             if (boardSetup[selectedRow][selectedCol] instanceof King) {
                 if (selectedRow==row && selectedCol==col&&!hell){
@@ -572,6 +607,8 @@ public class Board extends AppCompatActivity {
 
     }
     public List<int[]> getKingsValidMoves(Piece piece) {
+        int fromX = piece.x;
+        int fromY = piece.y;
 
         List<int[]> validMoves = getValidMoves(piece);
 
@@ -580,21 +617,21 @@ public class Board extends AppCompatActivity {
         for (int[] move : validMoves) {
             Piece eatenPiece = boardSetup[move[0]][move[1]];
 
-            boardSetup[selectedRow][selectedCol].setY(move[1]);
-            boardSetup[selectedRow][selectedCol].setX(move[0]);
+            boardSetup[fromX][fromY].setY(move[1]);
+            boardSetup[fromX][fromY].setX(move[0]);
 
-            boardSetup[move[0]][move[1]] = boardSetup[selectedRow][selectedCol];
-            boardSetup[selectedRow][selectedCol] = null;
+            boardSetup[move[0]][move[1]] = boardSetup[fromX][fromY];
+            boardSetup[fromX][fromY] = null;
 
             if (isKingInCheck(isWhiteTurn, false)) {
-                boardSetup[move[0]][move[1]].setY(selectedCol);
-                boardSetup[move[0]][move[1]].setX(selectedRow);
-                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]].setY(fromY);
+                boardSetup[move[0]][move[1]].setX(fromX);
+                boardSetup[fromX][fromY] = boardSetup[move[0]][move[1]];
                 boardSetup[move[0]][move[1]] = eatenPiece;
             }else{
-                boardSetup[move[0]][move[1]].setY(selectedCol);
-                boardSetup[move[0]][move[1]].setX(selectedRow);
-                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]].setY(fromY);
+                boardSetup[move[0]][move[1]].setX(fromX);
+                boardSetup[fromX][fromY] = boardSetup[move[0]][move[1]];
                 boardSetup[move[0]][move[1]] = eatenPiece;
                 kingsValidMoves.add(new int[]{move[0], move[1]});
             }
@@ -602,6 +639,8 @@ public class Board extends AppCompatActivity {
         return kingsValidMoves;
     }
     public List<int[]> getValidMovesForCheck(Piece piece) {
+        int fromX = piece.x;
+        int fromY = piece.y;
 
         List<int[]> validMoves = getValidMoves(piece);
 
@@ -610,21 +649,21 @@ public class Board extends AppCompatActivity {
         for (int[] move : validMoves) {
             Piece eatenPiece = boardSetup[move[0]][move[1]];
 
-            boardSetup[selectedRow][selectedCol].setY(move[1]);
-            boardSetup[selectedRow][selectedCol].setX(move[0]);
+            boardSetup[fromX][fromY].setY(move[1]);
+            boardSetup[fromX][fromY].setX(move[0]);
 
-            boardSetup[move[0]][move[1]] = boardSetup[selectedRow][selectedCol];
-            boardSetup[selectedRow][selectedCol] = null;
+            boardSetup[move[0]][move[1]] = boardSetup[fromX][fromY];
+            boardSetup[fromX][fromY] = null;
 
             if (isKingInCheck(isWhiteTurn, false)) {
-                boardSetup[move[0]][move[1]].setY(selectedCol);
-                boardSetup[move[0]][move[1]].setX(selectedRow);
-                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]].setY(fromY);
+                boardSetup[move[0]][move[1]].setX(fromX);
+                boardSetup[fromX][fromY] = boardSetup[move[0]][move[1]];
                 boardSetup[move[0]][move[1]] = eatenPiece;
             }else{
-                boardSetup[move[0]][move[1]].setY(selectedCol);
-                boardSetup[move[0]][move[1]].setX(selectedRow);
-                boardSetup[selectedRow][selectedCol] = boardSetup[move[0]][move[1]];
+                boardSetup[move[0]][move[1]].setY(fromY);
+                boardSetup[move[0]][move[1]].setX(fromX);
+                boardSetup[fromX][fromY] = boardSetup[move[0]][move[1]];
                 boardSetup[move[0]][move[1]] = eatenPiece;
                 ValidMovesForCheck.add(new int[]{move[0], move[1]});
             }
@@ -708,7 +747,23 @@ public class Board extends AppCompatActivity {
         return isCheckmate;
     }
 
-
+    public boolean isCellUnderAttack(int row, int col, boolean byWhite) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                Piece p = boardSetup[i][j];
+                if (p != null && p.isWhite == byWhite) {
+                    if (p instanceof King) continue;
+                    List<int[]> moves = getValidMoves(p);
+                    for (int[] move : moves) {
+                        if (move[0] == row && move[1] == col) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
 
 
@@ -865,26 +920,75 @@ public class Board extends AppCompatActivity {
 
         @Override
         public boolean isValidMove(int newX, int newY) {
-            if (x==newX && y==newY) return false;
-            // Король может ходить максимум на 1 клетку в любом направлении
-            if (Math.abs(newX - x) > 1 || Math.abs(newY - y) > 1 || (newX == x && newY == y)) {
-                return false;
+            if (x == newX && y == newY) return false;
+
+            if (Math.abs(newX - x) <= 1 && Math.abs(newY - y) <= 1) {
+                Piece targetPiece = getPiece(newX, newY);
+                return targetPiece == null || targetPiece.isWhite != this.isWhite;
             }
 
-            // Проверяем, свободна ли клетка или занята фигурой противника
-            Piece targetPiece = getPiece(newX, newY);
-            return targetPiece == null || targetPiece.isWhite != this.isWhite;
+            if (!hasMoved && x == newX && (y == 4)) {
+                // Короткая рокировка
+                if (newY == 6) {
+                    Piece rook = getPiece(x, 7);
+                    if (rook instanceof Rook && !((Rook) rook).hasMoved) {
+                        if (getPiece(x, 5) == null && getPiece(x, 6) == null) {
+                            if (!isCellUnderAttack(x, 5, !isWhite) && !isCellUnderAttack(x, 6, !isWhite) && !isCellUnderAttack(x, 4, !isWhite)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                // Длинная рокировка
+                if (newY == 2) {
+                    Piece rook = getPiece(x, 0);
+                    if (rook instanceof Rook && !((Rook) rook).hasMoved) {
+                        if (getPiece(x, 1) == null && getPiece(x, 2) == null && getPiece(x, 3) == null) {
+                            if (!isCellUnderAttack(x, 3, !isWhite) && !isCellUnderAttack(x, 2, !isWhite) && !isCellUnderAttack(x, 4, !isWhite)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
     }
 
 
 
-    private void move(int selectedRow,int selectedCol, int row, int col, ImageView cell,ImageView selectedPiece){
+    private void move(int selectedRow,int selectedCol, int row, int col, ImageView cell,ImageView selectedPiece,int promoteTo){
+        boolean rok=false;
         if (boardSetup[selectedRow][selectedCol]==null){
             return;
         }
         isWhiteTurn = !isWhiteTurn;
         Piece eatenPiece = boardSetup[row][col];
+
+        if (boardSetup[selectedRow][selectedCol] instanceof King && Math.abs(col - selectedCol) == 2) {
+            // Рокировка
+            if (col == 6) {
+                boardSetup[row][5] = boardSetup[row][7];
+                boardSetup[row][7] = null;
+                boardSetup[row][5].x = row;
+                boardSetup[row][5].y = 5;
+                boardSetup[row][5].hasMoved = true;
+                cells[row][5].setImageDrawable(getResources().getDrawable(boardSetup[row][5].pic));
+                cells[row][7].setImageDrawable(null);
+                rok = true;
+            } else if (col == 2) {
+                boardSetup[row][3] = boardSetup[row][0];
+                boardSetup[row][0] = null;
+                boardSetup[row][3].x = row;
+                boardSetup[row][3].y = 3;
+                boardSetup[row][3].hasMoved = true;
+                cells[row][3].setImageDrawable(getResources().getDrawable(boardSetup[row][3].pic));
+                cells[row][0].setImageDrawable(null);
+                rok = true;
+            }
+        }
 
         // Перемещаем фигуру
         boardSetup[selectedRow][selectedCol].setY(col);
@@ -1055,6 +1159,16 @@ public class Board extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 if (snapshot.exists()) {
+                    Integer isLeft = snapshot.child("isLeft").getValue(Integer.class);
+                    if (isLeft != null && isLeft == 1) {
+                        if (isWhite){
+                            theEndgame("Opponent left the game",false, "white");
+                        }else{
+                            theEndgame("Opponent left the game",false, "black");
+                        }
+                        return;
+                    }
+                    Integer promoteTo = snapshot.child("promoteTo").getValue(Integer.class);
                     Integer x1 = snapshot.child("x1").getValue(Integer.class);
                     Integer y1 = snapshot.child("y1").getValue(Integer.class);
                     Integer x2 = snapshot.child("x2").getValue(Integer.class);
@@ -1063,8 +1177,16 @@ public class Board extends AppCompatActivity {
                     if (x1 != null && y1 != null && x2 != null && y2 != null) {
                         if (isWhite != isWhiteTurn) {
 
-                            move(x1, y1, x2, y2, cells[x2][y2], cells[x1][y1]);
+                            for (int row = 0; row < BOARD_SIZE; row++) {
+                                for (int col = 0; col < BOARD_SIZE; col++) {
+                                    cells[row][col].setBackgroundColor((row + col) % 2 == 0 ? getResources().getColor(R.color.bej) : getResources().getColor(R.color.brown));
+                                }
+                            }
 
+                            move(x1, y1, x2, y2, cells[x2][y2], cells[x1][y1], promoteTo);
+
+                            cells[x1][y1].setBackgroundColor((x1 + y1) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
+                            cells[x2][y2].setBackgroundColor((x2 + y2) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
                         }
                     }
                 }
@@ -1139,21 +1261,53 @@ public class Board extends AppCompatActivity {
 
         View.OnClickListener listener = v -> {
             Piece newPiece = null;
-            if(isWhite) {
-                if (v == queenButton) newPiece = new Queen(row, col, isWhite);
-                else if (v == rookButton) newPiece = new Rook(row, col, isWhite);
-                else if (v == bishopButton) newPiece = new Bishop(row, col, isWhite);
-                else if (v == knightButton) newPiece = new Knight(row, col, isWhite);
-            }else{
-                if (v == knightButton) newPiece = new Queen(row, col, isWhite);
-                else if (v == bishopButton) newPiece = new Rook(row, col, isWhite);
-                else if (v == rookButton) newPiece = new Bishop(row, col, isWhite);
-                else if (v == queenButton) newPiece = new Knight(row, col, isWhite);
+            int promoteCode = 0;
+
+            if (isWhite) {
+                if (v == queenButton) {
+                    newPiece = new Queen(row, col, true);
+                    promoteCode = 1;
+                } else if (v == rookButton) {
+                    newPiece = new Rook(row, col, true);
+                    promoteCode = 2;
+                } else if (v == bishopButton) {
+                    newPiece = new Bishop(row, col, true);
+                    promoteCode = 3;
+                } else if (v == knightButton) {
+                    newPiece = new Knight(row, col, true);
+                    promoteCode = 4;
+                }
+            } else {
+                if (v == knightButton) {
+                    newPiece = new Queen(row, col, false);
+                    promoteCode = 1;
+                } else if (v == bishopButton) {
+                    newPiece = new Rook(row, col, false);
+                    promoteCode = 2;
+                } else if (v == rookButton) {
+                    newPiece = new Bishop(row, col, false);
+                    promoteCode = 3;
+                } else if (v == queenButton) {
+                    newPiece = new Knight(row, col, false);
+                    promoteCode = 4;
+                }
             }
-            if (newPiece != null) {
-                boardSetup[row][col] = newPiece;
-                cells[row][col].setImageDrawable(getResources().getDrawable(newPiece.pic));
+            if(isOnlineGame) {
+                if (newPiece != null) {
+                    boardSetup[row][col] = newPiece;
+                    cells[row][col].setImageDrawable(getResources().getDrawable(newPiece.pic));
+
+                    DatabaseReference lastMoveRef = FirebaseDatabase.getInstance()
+                            .getReference("games")
+                            .child(gameId)
+                            .child("lastMove");
+
+                    Map<String, Object> update = new HashMap<>();
+                    update.put("promoteTo", promoteCode);
+                    lastMoveRef.updateChildren(update);
+                }
             }
+
             dialog.dismiss();
         };
 
@@ -1196,7 +1350,12 @@ public class Board extends AppCompatActivity {
                         theEndgame("White left the game",false, "black");
                     }else{
                         theEndgame("Black left the game",false, "white");
-                    }//НУЖНО СООБЩИТЬ БАЗЕ О ВЫХОДЕ ИЗ ИГРЫ
+                    }
+                    DatabaseReference lastMoveRef = FirebaseDatabase.getInstance().getReference("games").child(gameId).child("lastMove");
+
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("isLeft", 1);
+                    lastMoveRef.updateChildren(data);
                 }else{
 
                     if (whiteTimer != null) {
