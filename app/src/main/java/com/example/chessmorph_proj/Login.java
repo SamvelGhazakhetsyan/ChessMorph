@@ -28,6 +28,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class Login extends AppCompatActivity {
 
@@ -68,7 +69,32 @@ public class Login extends AppCompatActivity {
             }
         }
 
+        /*
 
+        Button testBtn = findViewById(R.id.testBtn);
+
+        testBtn.setOnClickListener(v -> {
+            String email = "individualproject****@gmail.com";
+            String password = "secret";
+
+            FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            // Успешный вход
+                            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+                            // Переход в следующую Activity
+                            Intent intent = new Intent(this, MainActivity.class);
+                            startActivity(intent);
+                            finish();
+                        } else {
+                            // Ошибка входа
+                            Toast.makeText(this, "Ошибка входа: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+        });
+
+         */
 
         mLogBtn.setOnClickListener(new View.OnClickListener() {
             @Override

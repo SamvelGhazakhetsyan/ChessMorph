@@ -1,12 +1,17 @@
 package com.example.chessmorph_proj;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.TypedValue;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageButton;
@@ -22,6 +27,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
@@ -33,13 +40,15 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class ProfileActivity extends AppCompatActivity {
 
     private String userId,nickname,name,surname,myNickname,myName,mySurname;
-    private boolean isMyProfile;
+    private boolean isMyProfile, isOnGame;
     private long regMillis,myRegMillis;
     FirebaseAuth fAuth;
     DatabaseReference ref;
@@ -59,7 +68,7 @@ public class ProfileActivity extends AppCompatActivity {
             window.setStatusBarColor(Color.parseColor("#55000000")); // Темный цвет для статус-бара
         }
         isMyProfile = getIntent().getBooleanExtra("isMyProfile", true);
-
+        isOnGame = getIntent().getBooleanExtra("isOnGame", false);
 
 
 
@@ -117,9 +126,11 @@ public class ProfileActivity extends AppCompatActivity {
                         .into(avatarImageView);
             }
 
+
         } else {
             userId = getIntent().getStringExtra("opponentId");
         }
+        isMyProfile = (userId.equals(fAuth.getCurrentUser().getUid()));
 
         ImageButton menuButton = findViewById(R.id.menuButton);
         if(isMyProfile) {
@@ -158,9 +169,47 @@ public class ProfileActivity extends AppCompatActivity {
                 popupMenu.show();
             });
         }else{
+            ImageView avatarImageView = findViewById(R.id.playButton);
+
+            ViewGroup.LayoutParams params = avatarImageView.getLayoutParams();
+            params.width = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, 50, avatarImageView.getResources().getDisplayMetrics());
+            params.height = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, 50, avatarImageView.getResources().getDisplayMetrics());
+
+            avatarImageView.setLayoutParams(params);
+
+
             menuButton.setOnClickListener(v -> {
                 PopupMenu popupMenu = new PopupMenu(ProfileActivity.this, v);
                 popupMenu.getMenuInflater().inflate(R.menu.profile_menu_other, popupMenu.getMenu());
+
+
+
+
+
+
+                String senderUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                String receiverUid = userId;
+                if(true){
+                    DatabaseReference userFriendsRef = FirebaseDatabase.getInstance()
+                            .getReference("users").child(senderUid).child("friends").child(receiverUid);
+
+                    userFriendsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                MenuItem item = popupMenu.getMenu().findItem(R.id.add_friend);
+                                item.setTitle("unfriend");
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(ProfileActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
 
                 popupMenu.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
@@ -175,10 +224,8 @@ public class ProfileActivity extends AppCompatActivity {
                                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to report", Toast.LENGTH_SHORT).show());
                         return true;
                     } else if (id == R.id.add_friend) {
-                        // Пример: добавить в друзья
-                        Toast.makeText(this, "Friend request sent", Toast.LENGTH_SHORT).show();
-                        // Здесь можно добавить реализацию отправки заявки в друзья
-                        return true;// DOOOOOOOOOOOOOOOOOOOOOOOO ITTTTTTTTTTTTTTTTTTTTT
+                        sendOrToggleFriendship(senderUid, receiverUid);
+                        return true;
                     }
                     return false;
                 });
@@ -188,7 +235,10 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
 
+        View friendsClickZone = findViewById(R.id.friendView);
+        friendsClickZone.setOnClickListener(v -> {
 
+        });
 
         ref = FirebaseDatabase.getInstance().getReference("users").child(userId);
 
@@ -282,6 +332,50 @@ public class ProfileActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Internet Error", Toast.LENGTH_SHORT).show();
             }
         });
+        RecyclerView friendsRecycler = findViewById(R.id.friendsRecycler);
+        friendsRecycler.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+        List<Friend> friendList = new ArrayList<>();
+        FriendsAdapter adapter = new FriendsAdapter(friendList, this);
+        friendsRecycler.setAdapter(adapter);
+
+        String currentUid = userId;
+        DatabaseReference friendsRef = FirebaseDatabase.getInstance()
+                .getReference("users").child(currentUid).child("friends");
+
+        friendsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot friendSnapshot : snapshot.getChildren()) {
+                    String friendUid = friendSnapshot.getKey();
+
+                    FirebaseDatabase.getInstance().getReference("users").child(friendUid)
+                            .addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                    String name = snapshot.child("nickname").getValue(String.class);
+                                    String avatar = snapshot.child("avatarUrl").getValue(String.class);
+                                    friendList.add(new Friend(friendUid, name, avatar));
+                                    adapter.notifyDataSetChanged();
+                                }
+
+                                @Override
+                                public void onCancelled(@NonNull DatabaseError error) {}
+                            });
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+
+        View friendClickZone = findViewById(R.id.friendView);
+
+        friendClickZone.setOnClickListener(v -> {
+            startActivity(new Intent(ProfileActivity.this, SearchFriendsActivity.class));
+        });
+
+
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -290,6 +384,154 @@ public class ProfileActivity extends AppCompatActivity {
             return insets;
         });
     }
+
+
+
+    public void sendOrToggleFriendship(String senderUid, String receiverUid) {
+        DatabaseReference userFriendsRef = FirebaseDatabase.getInstance()
+                .getReference("users").child(senderUid).child("friends").child(receiverUid);
+
+        userFriendsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    FirebaseDatabase.getInstance()
+                            .getReference("users").child(senderUid).child("friends").child(receiverUid).removeValue();
+                    FirebaseDatabase.getInstance()
+                            .getReference("users").child(receiverUid).child("friends").child(senderUid).removeValue();
+
+                    Toast.makeText(ProfileActivity.this, "Deleted from friends", Toast.LENGTH_SHORT).show();
+                } else {
+                    checkRequestsAndProceed(senderUid, receiverUid);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(ProfileActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void checkRequestsAndProceed(String senderUid, String receiverUid) {
+        DatabaseReference reverseRequestRef = FirebaseDatabase.getInstance()
+                .getReference("requests").child(senderUid).child(receiverUid);
+
+        reverseRequestRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    reverseRequestRef.removeValue();
+
+                    DatabaseReference senderFriends = FirebaseDatabase.getInstance()
+                            .getReference("users").child(senderUid).child("friends").child(receiverUid);
+                    DatabaseReference receiverFriends = FirebaseDatabase.getInstance()
+                            .getReference("users").child(receiverUid).child("friends").child(senderUid);
+
+                    senderFriends.setValue(true);
+                    receiverFriends.setValue(true);
+
+                    Toast.makeText(ProfileActivity.this, "Now you are friends!", Toast.LENGTH_SHORT).show();
+                } else {
+                    FirebaseDatabase.getInstance()
+                            .getReference("requests").child(receiverUid).child(senderUid)
+                            .setValue(true);
+
+                    Toast.makeText(ProfileActivity.this, "Request sent", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(ProfileActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    public class Friend {
+        private String uid;
+        private String name;
+        private String avatarUrl;
+
+        public Friend(String uid, String name, String avatarUrl) {
+            this.uid = uid;
+            this.name = name;
+            this.avatarUrl = avatarUrl;
+        }
+
+        public String getUid() { return uid; }
+        public String getName() { return name; }
+        public String getAvatarUrl() { return avatarUrl; }
+    }
+    public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendViewHolder> {
+        private List<Friend> friends;
+        private Context context;
+
+        public FriendsAdapter(List<Friend> friends, Context context) {
+            this.friends = friends;
+            this.context = context;
+        }
+
+        public class FriendViewHolder extends RecyclerView.ViewHolder {
+            ImageView avatarImageView;
+            TextView nameTextView;
+
+            public FriendViewHolder(View itemView) {
+                super(itemView);
+                avatarImageView = itemView.findViewById(R.id.avatarImageView);
+                nameTextView = itemView.findViewById(R.id.nameTextView);
+            }
+        }
+
+        @NonNull
+        @Override
+        public FriendViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(context).inflate(R.layout.item_friend, parent, false);
+            return new FriendViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull FriendViewHolder holder, int position) {
+            Friend friend = friends.get(position);
+            holder.nameTextView.setText(friend.getName());
+
+            holder.avatarImageView.setOnClickListener(v -> {
+                Intent intent = new Intent(context, ProfileActivity.class);
+                intent.putExtra("isMyProfile", false);
+                if(isOnGame){
+                    intent.putExtra("isOnGame", true);
+                }
+                intent.putExtra("opponentId", friend.getUid());
+                context.startActivity(intent);
+                finish();
+            });
+
+            Glide.with(context)
+                    .load(friend.getAvatarUrl())
+                    .placeholder(R.drawable.profile_images)
+                    .error(R.drawable.profile_images)
+                    .into(holder.avatarImageView);
+        }
+
+        @Override
+        public int getItemCount() {
+            return friends.size();
+        }
+    }
+
+    public void friendlyGame(View view){
+        if(isOnGame){
+            Toast.makeText(this, "You are already in the game", Toast.LENGTH_SHORT).show();
+        }else{
+            Intent intent = new Intent(this, ChessGameSettings.class);
+            intent.putExtra("isOnlineGame", true);
+            intent.putExtra("isFriendlyGame", true);
+            intent.putExtra("opponentId", userId);
+            startActivity(intent);
+            finish();
+        }
+    }
+
     public void backToMenu(View view) {
         finish();
     }

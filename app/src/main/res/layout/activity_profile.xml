@@ -13,10 +13,11 @@
         android:layout_width="match_parent"
         android:layout_height="180dp"
         android:background="#55000000"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:layout_editor_absoluteX="0dp" />
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageButton
         android:id="@+id/imageButton"
         android:layout_width="40dp"
@@ -100,14 +101,15 @@
 
     <View
         android:id="@+id/view1"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:background="#55000000"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="1:0.25"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.38" />
+        app:layout_constraintTop_toBottomOf="@+id/view"
+        app:layout_constraintVertical_bias="0.1" />
 
     <TextView
         android:id="@+id/gamesText"
@@ -222,36 +224,42 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@drawable/circle_background"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/friendView"
         app:layout_constraintDimensionRatio="1:1.5"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/view"
-        app:layout_constraintWidth_percent="0.3"
         app:layout_constraintHorizontal_bias="0.2"
-        app:layout_constraintVertical_bias="0.6"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/view1"
+        app:layout_constraintVertical_bias="0.5"
+        app:layout_constraintWidth_percent="0.3" />
 
     <View
         android:id="@+id/circleView2"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@drawable/circle_background"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/friendView"
         app:layout_constraintDimensionRatio="1:1.5"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/view"
-        app:layout_constraintWidth_percent="0.3"
         app:layout_constraintHorizontal_bias="0.8"
-        app:layout_constraintVertical_bias="0.6"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/view1"
+        app:layout_constraintVertical_bias="0.5"
+        app:layout_constraintWidth_percent="0.3" />
 
     <TextView
         android:id="@+id/chessRatingText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0sp"
+        android:layout_height="50sp"
         android:text="Chess"
         android:textColor="@color/white"
-        android:textSize="18dp"
+        android:textSize="18sp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="30sp"
+        android:autoSizeStepGranularity="2sp"
+        android:gravity="center"
+        android:maxWidth="800sp"
         app:layout_constraintBottom_toBottomOf="@+id/circleView"
         app:layout_constraintEnd_toEndOf="@+id/circleView"
         app:layout_constraintStart_toStartOf="@+id/circleView"
@@ -260,25 +268,37 @@
 
     <TextView
         android:id="@+id/chessRatingInt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:autoSizeMaxTextSize="30sp"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeStepGranularity="2sp"
+        android:autoSizeTextType="uniform"
+        android:gravity="center"
+        android:maxWidth="800sp"
         android:text="0"
         android:textColor="@color/white"
         android:textSize="17dp"
         app:layout_constraintBottom_toBottomOf="@+id/circleView"
         app:layout_constraintEnd_toEndOf="@+id/circleView"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/circleView"
         app:layout_constraintTop_toTopOf="@+id/circleView"
-        app:layout_constraintVertical_bias="0.5" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <TextView
         android:id="@+id/chessMorphRatingText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0sp"
+        android:layout_height="50sp"
         android:text="ChessMorph"
         android:textColor="@color/white"
-        android:textSize="18dp"
+        android:textSize="18sp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="30sp"
+        android:autoSizeStepGranularity="2sp"
+        android:gravity="center"
+        android:maxWidth="800sp"
         app:layout_constraintBottom_toBottomOf="@+id/circleView2"
         app:layout_constraintEnd_toEndOf="@+id/circleView2"
         app:layout_constraintStart_toStartOf="@+id/circleView2"
@@ -287,11 +307,17 @@
 
     <TextView
         android:id="@+id/chessMorphRatingInt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:text="0"
         android:textColor="@color/white"
         android:textSize="17dp"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="30sp"
+        android:autoSizeStepGranularity="2sp"
+        android:gravity="center"
+        android:maxWidth="800sp"
         app:layout_constraintBottom_toBottomOf="@+id/circleView2"
         app:layout_constraintEnd_toEndOf="@+id/circleView2"
         app:layout_constraintHorizontal_bias="0.5"
@@ -299,6 +325,50 @@
         app:layout_constraintTop_toTopOf="@+id/circleView2"
         app:layout_constraintVertical_bias="0.5" />
 
+    <View
+        android:id="@+id/friendView"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="#55000000"
+        app:layout_constraintVertical_bias="1"
+        app:layout_constraintBottom_toTopOf="@+id/friendsRecycler"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/friends"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Friends >"
+        android:textColor="@color/white"
+        android:textSize="17dp"
+        app:layout_constraintBottom_toBottomOf="@+id/friendView"
+        app:layout_constraintEnd_toEndOf="@+id/friendView"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="@+id/friendView"
+        app:layout_constraintTop_toTopOf="@+id/friendView"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/friendsRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="110dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
+
+    <ImageButton
+        android:id="@+id/playButton"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/play_button"
+        android:onClick="friendlyGame"
+        app:layout_constraintBottom_toBottomOf="@+id/view"
+        app:layout_constraintEnd_toEndOf="@+id/winRateText"
+        app:layout_constraintStart_toStartOf="@+id/winRateText"
+        app:layout_constraintTop_toBottomOf="@+id/view" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

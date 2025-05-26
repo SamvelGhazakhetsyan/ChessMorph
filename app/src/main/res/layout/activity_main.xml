@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -20,24 +21,37 @@
         tools:layout_editor_absoluteX="0dp" />
     <TextView
         android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:text="ChessMorph"
-        android:textSize="18dp"
         android:textColor="@color/white"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="100sp"
+        android:autoSizeStepGranularity="2sp"
+        android:gravity="center"
+        android:maxWidth="800sp"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="@+id/view"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <Button
         android:id="@+id/button3"
-        android:layout_width="331dp"
-        android:layout_height="52dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:onClick="fromHandToHand"
         android:text="From hand to hand"
         android:textSize="20sp"
         android:textColor="@color/white"
         android:backgroundTint="@color/lightgreen"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="45sp"
+        android:autoSizeStepGranularity="2sp"
+        app:cornerRadius="27dp"
+        app:layout_constraintDimensionRatio="6:1"
+        app:layout_constraintWidth_percent="0.68"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -46,18 +60,26 @@
 
     <Button
         android:id="@+id/button4"
-        android:layout_width="362dp"
-        android:layout_height="48dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:onClick="quickPlay"
         android:text="Quick play"
         android:textSize="20sp"
         android:textColor="@color/white"
         android:backgroundTint="@color/lightgreen"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="45sp"
+        android:autoSizeStepGranularity="2sp"
+        app:cornerRadius="27dp"
+        app:layout_constraintDimensionRatio="6:1"
+        app:layout_constraintWidth_percent="0.7"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.33" />
+        app:layout_constraintVertical_bias="0.33"
+        />
 
 
     <ImageButton
@@ -71,6 +93,59 @@
         app:layout_constraintStart_toStartOf="@+id/view"
         app:layout_constraintTop_toTopOf="@+id/view"
         app:srcCompat="@drawable/profile_images" />
+
+    <ImageButton
+        android:id="@+id/horse"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:onClick="toProfile"
+        android:scaleType="fitCenter"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintWidth_percent="0.3"
+        app:layout_constraintVertical_bias="1"
+        app:layout_constraintBottom_toTopOf="@+id/button4"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/view"
+        app:srcCompat="@drawable/good_horse" />
+
+    <View
+        android:id="@+id/friendView"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="#55000000"
+        app:layout_constraintBottom_toTopOf="@+id/friendsRecyclerMain"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintVertical_bias="1" />
+
+
+
+    <TextView
+        android:id="@+id/friends"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Play with friends"
+        android:textColor="@color/white"
+        android:textSize="17dp"
+        app:layout_constraintBottom_toBottomOf="@+id/friendView"
+        app:layout_constraintEnd_toEndOf="@+id/friendView"
+        app:layout_constraintHorizontal_bias="0.05"
+        app:layout_constraintStart_toStartOf="@+id/friendView"
+        app:layout_constraintTop_toTopOf="@+id/friendView"
+        app:layout_constraintVertical_bias="0.5" />
+
+
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/friendsRecyclerMain"
+        android:layout_width="match_parent"
+        android:layout_height="110dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -35,10 +35,10 @@ import androidx.appcompat.app.AlertDialog;
 
 public class ChessGameSettings extends AppCompatActivity {
     private Random random = new Random();
-    private boolean morphModeOn, isOnlineGame, isWhite = random.nextBoolean(),gameFound=false;
+    private boolean morphModeOn, isOnlineGame, isFriendlyGame, isWhite = random.nextBoolean(),gameFound=false;
     private long time=300000, plusTime=0;
     FirebaseAuth fAuth;
-    private String mode="classic", userId, gameId;
+    private String mode="classic", userId, gameId, opponentId;
     DatabaseReference gamesRef = FirebaseDatabase.getInstance().getReference("games");
     Intent intent;
 
@@ -69,7 +69,10 @@ public class ChessGameSettings extends AppCompatActivity {
 
 
         isOnlineGame = getIntent().getBooleanExtra("isOnlineGame", false);
-
+        isFriendlyGame = getIntent().getBooleanExtra("isFriendlyGame", false);
+        if(isFriendlyGame){
+            opponentId=getIntent().getStringExtra("opponentId");
+        }
 
         intent = new Intent(this, Board.class);
 
@@ -238,8 +241,45 @@ public class ChessGameSettings extends AppCompatActivity {
                             Integer plusTime = gameSnapshot.child("parameters/plusTime").getValue(Integer.class);
                             String whitePlayer = gameSnapshot.child("players/whitePlayer").getValue(String.class);
                             String blackPlayer = gameSnapshot.child("players/blackPlayer").getValue(String.class);
+                            String friendlyGameOpponent = gameSnapshot.child("parameters/friendlyGame").getValue(String.class);
 
-                            if (time != null && plusTime != null && time == selectedTime && plusTime == selectedPlusTime) {
+                            boolean friendlyGame=false;
+                            if(friendlyGameOpponent==null && !isFriendlyGame){
+                                friendlyGame=true;
+                            }else if(isFriendlyGame){
+                                if(friendlyGameOpponent==null){
+                                    if(whitePlayer!=null){
+                                        if (opponentId.equals(whitePlayer)){
+                                            friendlyGame=true;
+                                        }
+                                    }
+                                    if(blackPlayer!=null){
+                                        if(opponentId.equals(blackPlayer)){
+                                            friendlyGame=true;
+                                        }
+                                    }
+                                }else{
+                                    if (friendlyGameOpponent.equals(userId)){
+                                        if(whitePlayer!=null){
+                                            if (opponentId.equals(whitePlayer)){
+                                                friendlyGame=true;
+                                            }
+                                        }
+                                        if(blackPlayer!=null){
+                                            if(opponentId.equals(blackPlayer)){
+                                                friendlyGame=true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }else if(friendlyGameOpponent!=null) {
+                                if (friendlyGameOpponent.equals(userId) && !isFriendlyGame) {
+                                    friendlyGame = true;
+                                }
+                            }
+
+
+                            if (time != null && plusTime != null && time == selectedTime && plusTime == selectedPlusTime && friendlyGame) {
                                 if (whitePlayer == null || whitePlayer.isEmpty()) {
                                     isWhite = true;
                                     gamesRef.child(gameId).child("players/whitePlayer").setValue(currentUserId);
@@ -289,10 +329,13 @@ public class ChessGameSettings extends AppCompatActivity {
             gameData.put("parameters/mode", mode);
             gameData.put("parameters/time", time);
             gameData.put("parameters/plusTime", plusTime);
+            if(isFriendlyGame){
+                gameData.put("parameters/friendlyGame", opponentId);
+            }
             gameData.put("players/whitePlayer", whitePlayer);
             gameData.put("players/blackPlayer", blackPlayer);
             gameData.put("turn", whitePlayer);
-            gameData.put("status", "waiting"); // Ожидание игрока
+            gameData.put("status", "waiting");// Ожидание игрока
 
             gameRef.updateChildren(gameData);
             Log.d("Chess", "Создана новая игра: " + gameId);

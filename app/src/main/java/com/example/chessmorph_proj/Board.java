@@ -80,6 +80,7 @@ public class Board extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //ориентация вертикальная
         setContentView(R.layout.activity_board);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -317,7 +318,6 @@ public class Board extends AppCompatActivity {
         if(isgameend){
             return;
         }
-        System.out.println("row: "+row+" col: "+col);
         boolean moved=false;
 
         if (selectedPiece == null) {
@@ -362,6 +362,7 @@ public class Board extends AppCompatActivity {
 
                 // Перемещаем фигуру
                 if (boardSetup[selectedRow][selectedCol] instanceof King && Math.abs(col - selectedCol) == 2) {
+                    System.out.println("FUUUUUCK YOUUUUUU");
                     // Рокировка
                     if (col == 6) {
                         boardSetup[row][5] = boardSetup[row][7];
@@ -382,6 +383,7 @@ public class Board extends AppCompatActivity {
                         cells[row][0].setImageDrawable(null);
                         rok=true;
                     }
+                    System.out.println("YEEEEBOIIIII");
                 }
                 boardSetup[selectedRow][selectedCol].setY(col);
                 boardSetup[selectedRow][selectedCol].setX(row);
@@ -465,9 +467,9 @@ public class Board extends AppCompatActivity {
                         if (isCheckmate(isWhiteTurn)) {
                             isMate = true;
                             if (isWhiteTurn) {
-                                theEndgame("Black wins", false, "black");
+                                theEndgame("Black won", false, "black");
                             } else {
-                                theEndgame("White wins", false, "white");
+                                theEndgame("White won", false, "white");
                             }
                         }
                     }
@@ -959,7 +961,7 @@ public class Board extends AppCompatActivity {
 
 
 
-    private void move(int selectedRow,int selectedCol, int row, int col, ImageView cell,ImageView selectedPiece,int promoteTo){
+    private void move(int selectedRow,int selectedCol, int row, int col, ImageView cell,ImageView selectedPiece){
         boolean rok=false;
         if (boardSetup[selectedRow][selectedCol]==null){
             return;
@@ -1004,14 +1006,23 @@ public class Board extends AppCompatActivity {
             boardSetup[row][col]=eatenPiece;
             System.out.println(WhiteKing.x+" "+ WhiteKing.y+":"+boardSetup[selectedRow][selectedCol].x+" "+boardSetup[selectedRow][selectedCol].y);
         }else{
+            boolean promoted=false;
             if (boardSetup[row][col] instanceof Pawn) {
                 if ((boardSetup[row][col].isWhite && row == 0) || (!boardSetup[row][col].isWhite && row == 7)) {
-                    promotePawn(row, col, boardSetup[row][col].isWhite);
-
+                    Piece newPiece;
+                    if(isWhite){
+                        newPiece=new Queen(row,col,false);
+                    }else{
+                        newPiece=new Queen(row,col,true);
+                    }
+                    boardSetup[row][col]=newPiece;
+                    cells[row][col].setImageDrawable(getResources().getDrawable(newPiece.pic));
+                    promoted=true;
                 }
             }
-
-            cell.setImageDrawable(selectedPiece.getDrawable());
+            if(!promoted){
+                cell.setImageDrawable(selectedPiece.getDrawable());
+            }
             selectedPiece.setImageDrawable(null);
 
 
@@ -1052,9 +1063,9 @@ public class Board extends AppCompatActivity {
                 if(isCheckmate(isWhiteTurn)){
                     System.out.println("CHECKMATE");
                     if(isWhiteTurn){
-                        theEndgame("Black wins",false, "black");
+                        theEndgame("Black won",false, "black");
                     }else{
-                        theEndgame("White wins",false, "white");
+                        theEndgame("White won",false, "white");
                     }
                 }
             }
@@ -1101,9 +1112,9 @@ public class Board extends AppCompatActivity {
 
             public void onFinish() {
                 if(isWhite){
-                    theEndgame("Black wins by time",true, "black");
+                    theEndgame("Black won by time",true, "black");
                 }else{
-                    theEndgame("White wins by time",true, "white");
+                    theEndgame("White won by time",true, "white");
                 }
             }
         }.start();
@@ -1118,9 +1129,9 @@ public class Board extends AppCompatActivity {
 
             public void onFinish() {
                 if(isWhite){
-                    theEndgame("White wins by time",true, "white");
+                    theEndgame("White won by time",true, "white");
                 }else{
-                    theEndgame("Black wins by time",true, "black");
+                    theEndgame("Black won by time",true, "black");
                 }
             }
         }.start();
@@ -1168,7 +1179,6 @@ public class Board extends AppCompatActivity {
                         }
                         return;
                     }
-                    Integer promoteTo = snapshot.child("promoteTo").getValue(Integer.class);
                     Integer x1 = snapshot.child("x1").getValue(Integer.class);
                     Integer y1 = snapshot.child("y1").getValue(Integer.class);
                     Integer x2 = snapshot.child("x2").getValue(Integer.class);
@@ -1183,7 +1193,7 @@ public class Board extends AppCompatActivity {
                                 }
                             }
 
-                            move(x1, y1, x2, y2, cells[x2][y2], cells[x1][y1], promoteTo);
+                            move(x1, y1, x2, y2, cells[x2][y2], cells[x1][y1]);
 
                             cells[x1][y1].setBackgroundColor((x1 + y1) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
                             cells[x2][y2].setBackgroundColor((x2 + y2) % 2 == 0 ? getResources().getColor(R.color.yellow) : getResources().getColor(R.color.darkYellow));
@@ -1292,6 +1302,17 @@ public class Board extends AppCompatActivity {
                     promoteCode = 4;
                 }
             }
+            if(isOnlineGame){
+                if(isWhite){
+                    newPiece=new Queen(row,col,true);
+                }else{
+                    newPiece=new Queen(row,col,false);
+                }
+            }else{
+                boardSetup[row][col]=newPiece;
+                cells[row][col].setImageDrawable(getResources().getDrawable(newPiece.pic));
+            }
+            /*
             if(isOnlineGame) {
                 if (newPiece != null) {
                     boardSetup[row][col] = newPiece;
@@ -1307,6 +1328,7 @@ public class Board extends AppCompatActivity {
                     lastMoveRef.updateChildren(update);
                 }
             }
+             */
 
             dialog.dismiss();
         };
@@ -1332,6 +1354,7 @@ public class Board extends AppCompatActivity {
     public void toOpponentProfile(View view){
         Intent intent = new Intent(this, ProfileActivity.class);
         intent.putExtra("isMyProfile", false);
+        intent.putExtra("isOnGame", true);
         intent.putExtra("opponentId", opponentId);
         startActivity(intent);
     }
